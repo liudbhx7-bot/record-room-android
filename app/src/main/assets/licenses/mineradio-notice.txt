@@ -1,0 +1,12 @@
+本版本 QQ 音乐及汽水音乐接入参考并移植自 Mineradio-paused。
+Copyright 2026 XxHuberrr. Licensed under GPL-3.0-only.
+Source: https://github.com/XxHuberrr/Mineradio-paused
+Revision: d43de565acabfdc1a9c9820a27e81a98ccbebcef
+
+汽水 Passport 授权上游：Wx2yZx/Mineradio-Qishui-QR-Login
+Revision: aaadaab7d011714f94fbe45b382ba8dcc7cf17b9, GPL-3.0-only.
+Android adaptation: 原生Java界面与账号存储、受限WebView授权host、完整分页、试听及权限校验、Android Media3播放适配。
+
+ByteDance/Qishui web security runtime resources remain the property of their respective rights holders and are used for interoperability with the user's own official account session. React/ReactDOM retain their included license notices.
+本应用不是各音乐平台的官方产品。授权、曲库和可播放内容由平台与账号权益决定。
+本次分发同时附对应源代码。GNU GPL v3全文见同目录mineradio-GPL-3.0.txt。

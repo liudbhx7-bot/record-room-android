@@ -1,0 +1,57 @@
+[
+  {
+    "label": "AndroidX Media3 1.11.1",
+    "url": "https://raw.githubusercontent.com/androidx/media/1.11.1/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "label": "ZXing 3.5.4 (including upstream third-party notices)",
+    "url": "https://raw.githubusercontent.com/zxing/zxing/zxing-3.5.4/LICENSE",
+    "sha256": "3f62881f0566227a24b12e5a754cc79f39aaa94883038e95c94812e1f50af42f"
+  },
+  {
+    "label": "Guava 33.3.1-android and failureaccess",
+    "url": "https://raw.githubusercontent.com/google/guava/v33.3.1/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "label": "JetBrains annotations13 sources",
+    "url": "https://maven-central.storage-download.googleapis.com/maven2/org/jetbrains/annotations/13.0/annotations-13.0-sources.jar",
+    "sha256": "42a5e144b8e81d50d6913d1007b695e62e614705268d8cf9f13dbdc478c2c68e"
+  },
+  {
+    "label": "Gson 2.8.6",
+    "url": "https://raw.githubusercontent.com/google/gson/gson-parent-2.8.6/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "file": "licenses/gson-2.8.6.txt",
+    "checked": "2026-11-09"
+  },
+  {
+    "label": "Kotlin standard library 1.9.23",
+    "url": "https://raw.githubusercontent.com/JetBrains/kotlin/v1.9.23/license/LICENSE.txt",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "file": "licenses/kotlin-1.9.23.txt",
+    "checked": "2026-11-09"
+  },
+  {
+    "label": "Kotlin coroutines 1.6.0",
+    "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.6.0/LICENSE.txt",
+    "sha256": "b1febe6399dffb10d19d35e7663ab16300c93cb0476a94115df1cc0097a8ffd8",
+    "file": "licenses/coroutines-1.6.0.txt",
+    "checked": "2026-11-09"
+  },
+  {
+    "label": "JavaCPP upstream license (version not identified in the Apple AAR)",
+    "url": "https://raw.githubusercontent.com/bytedeco/javacpp/master/LICENSE.txt",
+    "sha256": "bd5f6b1276fd448f016115dcd4a39ee6f5e3ce32441a0cccdb9e6370e9df5434",
+    "file": "licenses/javacpp.txt",
+    "checked": "2026-11-09"
+  },
+  {
+    "label": "LLVM libc++ upstream license; Apple SDK changelog declares NDK 28.1.13356709",
+    "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-19.1.0/libcxx/LICENSE.TXT",
+    "sha256": "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b",
+    "file": "licenses/libcxx.txt",
+    "checked": "2026-11-09"
+  }
+]

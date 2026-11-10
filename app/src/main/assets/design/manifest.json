@@ -1,0 +1,37 @@
+{
+  "approved_design": "v1",
+  "application": "唱片机",
+  "usage": "individual native-composited artwork; no UI screenshot assets",
+  "artifacts": [
+    {
+      "path": "design/disc-smoke-lilac-v1.png",
+      "bytes": 1867170,
+      "sha256": "508b0098a5e38729905f3271bd25977a904a0865b7a931646f7da7c82b3d220b",
+      "source": "approved-ui-design-v1/assets/disc-smoke-lilac-v1.png"
+    },
+    {
+      "path": "design/library-empty-v1.png",
+      "bytes": 1646797,
+      "sha256": "7ce328d85aec63142f3674bd40760ab5f4fff3411daea41202290c8835fc23c6",
+      "source": "approved-ui-design-v1/assets/library-empty-v1.png"
+    },
+    {
+      "path": "design/paper-ivory-fiber-v1.png",
+      "bytes": 2223300,
+      "sha256": "71a06f368f866306c1eb2cf23c6721eae6b4ae489ab89a8853b7cb02213130af",
+      "source": "approved-ui-design-v1/assets/paper-ivory-fiber-v1.png"
+    },
+    {
+      "path": "design/sleeve-ivory-window-v1.png",
+      "bytes": 1820770,
+      "sha256": "097a24f507cd55959707332c0d11461c874584ed6b18859d50c2d0b5de9fce1e",
+      "source": "approved-ui-design-v1/assets/sleeve-ivory-window-v1.png"
+    },
+    {
+      "path": "design/tonearm-graphite-v1.png",
+      "bytes": 428917,
+      "sha256": "a1b1ae217535dd410cbbf4a6f6b5bde305c6cdf1474fb17968ced9da8ea2b6f8",
+      "source": "approved-ui-design-v1/assets/tonearm-graphite-v1.png"
+    }
+  ]
+}

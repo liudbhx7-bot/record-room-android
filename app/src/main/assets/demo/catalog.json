@@ -1,0 +1,101 @@
+[
+  {
+    "id": "demo-night-1",
+    "title": "午夜慢行",
+    "artist": "无人街角 · 合成演示",
+    "album": "夜色留声",
+    "source": "内置演示",
+    "uri": "asset:///demo/night-1.wav",
+    "artworkUri": "asset:///demo/night-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 1
+  },
+  {
+    "id": "demo-night-2",
+    "title": "灯下留声",
+    "artist": "无人街角 · 合成演示",
+    "album": "夜色留声",
+    "source": "内置演示",
+    "uri": "asset:///demo/night-2.wav",
+    "artworkUri": "asset:///demo/night-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 2
+  },
+  {
+    "id": "demo-night-3",
+    "title": "最后一班车",
+    "artist": "无人街角 · 合成演示",
+    "album": "夜色留声",
+    "source": "内置演示",
+    "uri": "asset:///demo/night-3.wav",
+    "artworkUri": "asset:///demo/night-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 3
+  },
+  {
+    "id": "demo-sun-1",
+    "title": "海风经过",
+    "artist": "海岸电台 · 合成演示",
+    "album": "日落之后",
+    "source": "内置演示",
+    "uri": "asset:///demo/sun-1.wav",
+    "artworkUri": "asset:///demo/sun-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 1
+  },
+  {
+    "id": "demo-sun-2",
+    "title": "日落的方向",
+    "artist": "海岸电台 · 合成演示",
+    "album": "日落之后",
+    "source": "内置演示",
+    "uri": "asset:///demo/sun-2.wav",
+    "artworkUri": "asset:///demo/sun-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 2
+  },
+  {
+    "id": "demo-sun-3",
+    "title": "暖色海岸",
+    "artist": "海岸电台 · 合成演示",
+    "album": "日落之后",
+    "source": "内置演示",
+    "uri": "asset:///demo/sun-3.wav",
+    "artworkUri": "asset:///demo/sun-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 3
+  },
+  {
+    "id": "demo-forest-1",
+    "title": "树影里的信",
+    "artist": "慢速森林 · 合成演示",
+    "album": "林间来信",
+    "source": "内置演示",
+    "uri": "asset:///demo/forest-1.wav",
+    "artworkUri": "asset:///demo/forest-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 1
+  },
+  {
+    "id": "demo-forest-2",
+    "title": "苔藓与晨雾",
+    "artist": "慢速森林 · 合成演示",
+    "album": "林间来信",
+    "source": "内置演示",
+    "uri": "asset:///demo/forest-2.wav",
+    "artworkUri": "asset:///demo/forest-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 2
+  },
+  {
+    "id": "demo-forest-3",
+    "title": "山风归来",
+    "artist": "慢速森林 · 合成演示",
+    "album": "林间来信",
+    "source": "内置演示",
+    "uri": "asset:///demo/forest-3.wav",
+    "artworkUri": "asset:///demo/forest-v2.png",
+    "durationMs": 18000,
+    "trackNumber": 3
+  }
+]

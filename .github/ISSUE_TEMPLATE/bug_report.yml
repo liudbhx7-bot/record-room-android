@@ -1,0 +1,35 @@
+name: 问题反馈
+description: 报告可以复现的安装、界面或播放问题
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "请勿填写Cookie、密码、令牌、验证码、私钥或含授权参数的链接。"
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本
+      placeholder: 0.7.7
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: 手机型号与系统版本
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤、预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: playback
+    attributes:
+      label: 若为播放问题，填写平台、具体歌曲版本和官方App对照
+      description: 同账号在官方App能否完整播放？尚未确认请注明。
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 脱敏截图与补充信息

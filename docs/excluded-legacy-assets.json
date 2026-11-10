@@ -1,0 +1,12 @@
+{
+  "reason": "Inactive Soda direct-login web assets omitted from public source; official-app MediaSession linkage does not use them. Original third-party rights retained.",
+  "files": {
+    "app/src/main/assets/qishui-auth/android-host.js": "ffd71f1d41375027981e5ecd04476a0e896275856248a737107c2e7b31479a5f",
+    "app/src/main/assets/qishui-auth/bdms.js": "dd918a8d2028d68b47407e205eae01d9d674daa51013bc6c5efc0573e4b0a8e0",
+    "app/src/main/assets/qishui-auth/host.html": "7d661ab75e0d4778d11238306161501728a4624efc03cc942968612c3ede26b8",
+    "app/src/main/assets/qishui-auth/react-dom.js": "9db33292007ab6c38527b39d5663e976a305564e19b2a5a8713ea2b2c00f505d",
+    "app/src/main/assets/qishui-auth/react.js": "229bbf4d0e7488209564152c6723497f1ac3934136ca1684233d2fa88fa4146f",
+    "app/src/main/assets/qishui-auth/sdk-glue.js": "42f03c3d8f25c3b4f8c499b456999377b1a9d7c5238a0a95d252d6a64ae91b13",
+    "app/src/main/assets/qishui-auth/seed.html": "132d5d0065704762febaafdad37eaa40a6335bb2bcafff2d758f95bcc052c3f0"
+  }
+}

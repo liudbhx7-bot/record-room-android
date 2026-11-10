@@ -1,0 +1,8 @@
+{
+  "source": "https://developer.apple.com/musickit/",
+  "distribution": "Android-MusicKit-SDK-1.1.4",
+  "artifacts": [
+    {"filename": "MediaPlayback-release-1.1.4.aar", "sha256": "f080bada8e03928989e09eee4140cafcfd010824209b183d2420e7e228eb7d62"},
+    {"filename": "MusicKitAuth-release-1.1.5.aar", "sha256": "b3e2f90e394412a7805d274607e1ce397773e8f16e0325ae5008bf477696b1d5"}
+  ]
+}

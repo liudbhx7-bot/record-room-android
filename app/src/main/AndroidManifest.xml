@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.recordroom.vinyl" android:versionCode="18" android:versionName="0.7.7">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <queries>
+        <package android:name="com.tencent.qqmusic" />
+        <package android:name="com.luna.music" />
+        <package android:name="com.apple.android.music" />
+    </queries>
+    <application android:allowBackup="false" android:label="唱片机" android:icon="@drawable/ic_app" android:theme="@style/AppTheme" android:supportsRtl="true" android:usesCleartextTraffic="false" android:resizeableActivity="true">
+        <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode" android:windowSoftInputMode="adjustResize">
+            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+        </activity>
+        <activity android:name=".QQMusicLoginActivity" android:exported="false" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode" android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity android:name=".AppleMusicLoginActivity" android:exported="false" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode" android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity android:name=".NeteaseWebLoginActivity" android:exported="false" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|uiMode" android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity android:name=".WidgetAppearanceActivity" android:exported="true" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+        <provider android:name=".ShareImageProvider" android:authorities="com.recordroom.vinyl.shares" android:exported="false" android:grantUriPermissions="true" />
+        <service android:name=".ExternalMusicNotificationListener" android:label="唱片机播放联动" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="false">
+            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+            <meta-data android:name="android.service.notification.default_filter_types" android:value="" />
+            <meta-data android:name="android.service.notification.disabled_filter_types" android:value="1,2,4,8" />
+        </service>
+        <service android:name=".PlayerService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <receiver android:name=".VinylWidgetProvider" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/vinyl_widget_info" />
+        </receiver>
+    </application>
+</manifest>
