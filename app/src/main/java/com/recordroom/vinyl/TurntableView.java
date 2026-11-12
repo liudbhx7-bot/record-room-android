@@ -102,7 +102,6 @@ public final class TurntableView extends View {
         if (referenceLayout) {rebuild(); invalidate();}
     }
     /** Keep faceplate lettering readable when users select a light manual finish. */
-    public void setDeckColor(int color) { if(cabinet.setColor(color)) invalidate(); }
 
     private float labelRatio() { return referenceLayout ? .455f : DesignSystem.RECORD_LABEL_RATIO; }
     public void setNeedleListener(NeedleListener listener) { needleListener = listener; }

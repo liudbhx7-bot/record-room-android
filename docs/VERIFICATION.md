@@ -1,5 +1,15 @@
 # 版本验证记录
 
+## 0.7.9 · 播放页字标调整
+
+2026-11-12。版本代码 20。公开源码编译后沿用发行签名，安装包通过 v2/v3 验签和 16 KB ZIP 对齐检查。
+
+- 474 项自动测试通过。在 Android 15 ARM64 模拟器上从 0.7.8 覆盖升级，连续三次冷启动通过。
+- 用发行 APK 播放内置音频，验证同专辑切歌、拖动进度、暂停和恢复、跨专辑换色、宽屏播放和工具入口。[琥珀播放页](screenshots/player.png) · [森林播放页](screenshots/player-forest.png) · [宽屏播放页](screenshots/wide-player.png)。
+- 本轮使用模拟器，OPPO Find N6 真机、外接 DAC 和在线会员播放未实测。
+
+安装包 SHA-256 为 `80dae198628f59973ba4e721be4138653d73360753a6a496ad2d32aacd4f98ea`。
+
 ## 浮光 01 · 0.7.8
 
 2026-11-12。Android 包名 `com.recordroom.vinyl`，版本代码 19。发行 APK 取自公开源码的构建输出并使用原发行签名；签名证书 SHA-256 与 0.7.7 一致，APK 通过 v2/v3 验签和 16 KB ZIP 对齐检查。
@@ -7,7 +17,7 @@
 - 在公开源码运行全部 474 项自动测试，通过。覆盖暖窗取光、灰阶/高饱和封面、材质、固定灯位、封套随封面更新且不随盘旋转，以及主屏/队列进度、无障碍定位和媒体会话更新。
 - 在 Android 15 / API 35 ARM64 模拟器，从原 0.7.7 安装包覆盖安装本次发行文件，随后 3 次冷启动均正常。
 - 使用实际 APK 和内置音频：暖色《午夜慢行》切至同专辑下一首，封套保持；从主屏拖动真实进度条到约 10 秒，暂停及恢复均有效；换《树影里的信》后封面与灯色均更新。切到宽屏仍保持播放，返回竖屏可打开工具。
-- [琥珀播放页](screenshots/player.png) · [森林播放页](screenshots/player-forest.png) · [宽屏播放页](screenshots/wide-player.png)。均为模拟器运行发行 APK 的截图。
+- [琥珀播放页](https://github.com/liudbhx7-bot/record-room-android/blob/v0.7.8/docs/screenshots/player.png) · [森林播放页](https://github.com/liudbhx7-bot/record-room-android/blob/v0.7.8/docs/screenshots/player-forest.png) · [宽屏播放页](https://github.com/liudbhx7-bot/record-room-android/blob/v0.7.8/docs/screenshots/wide-player.png)。均为模拟器运行发行 APK 的截图。
 
 安装包 SHA-256：`4bac3712049bad39727848f5484240111f90f5d60f5c6dcbf382c3abe4577ab3`。本次未连接 OPPO Find N6，也未使用私人音乐平台账号。以上不代表完成真机功耗、实际扬声器听验或会员歌曲验收。
 

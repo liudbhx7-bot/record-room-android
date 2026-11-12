@@ -442,7 +442,7 @@ public final class MainActivity extends Activity {
             }else root.setBackground(nextSurface);
             playerSurface=nextSurface;playerSurfaceColor=color;
         }
-        turntable.setDeckColor(color);turntable.setStyle(themes.disc(albumKey()));turntable.setRecordTint(themes.deckTint(albumKey()));
+        turntable.setStyle(themes.disc(albumKey()));turntable.setRecordTint(themes.deckTint(albumKey()));
         turntable.setMotionEnabled(themes.motion()); turntable.setLighting(themes.lighting());
         if(themes.keepAwake())getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ink = readableInk(color); mutedInk = blend(ink,color,.20f);

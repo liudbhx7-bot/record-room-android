@@ -2,14 +2,14 @@
 
 [返回项目主页](../README.md) · [常见问题](FAQ.md) · [反馈问题](https://github.com/liudbhx7-bot/record-room-android/issues/new/choose)
 
-适用于 **Record Room / 唱片机 0.7.8 预览版**。在线服务的可播放范围由对应平台与账号决定；当前验证范围见[验证记录](VERIFICATION.md)。
+适用于 **Record Room / 唱片机 0.7.9 预览版**。在线服务的可播放范围由对应平台与账号决定；当前验证范围见[验证记录](VERIFICATION.md)。
 
 ## 安装与更新
 
-1. 打开 [v0.7.8 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.8)。
-2. 下载 `Record-Room-0.7.8-Android.apk`。不要把 `Source code` 源码压缩包当作安装包。
+1. 打开 [v0.7.9 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.9)。
+2. 下载 `Record-Room-0.7.9-Android.apk`。不要把 `Source code` 源码压缩包当作安装包。
 3. 在 Android 上打开 APK，按系统提示允许当前下载来源安装应用，再完成安装。
-4. 系统应用信息中的版本应为 `0.7.8`，版本代码 `19`，包名 `com.recordroom.vinyl`。
+4. 系统应用信息中的版本应为 `0.7.9`，版本代码 `20`，包名 `com.recordroom.vinyl`。
 
 最低系统为 Android 8.0（API 26），面向 ARM / ARM64 设备。最低系统要求不代表所有机型都已实测。
 
@@ -29,7 +29,7 @@
 
 ## 播放页与唱针
 
-安装 0.7.8 后，进入播放页即可使用「浮光 01」。选一首带封面的歌曲，机身后方的封套与盘心会显示这张封面，左下盘缘随封面色调发光。
+安装 0.7.9 后，进入播放页即可使用「浮光 01」。选一首带封面的歌曲，机身后方的封套与盘心会显示这张封面，左下盘缘随封面色调发光。
 
 | 操作 | 行为 |
 | --- | --- |

@@ -6,7 +6,7 @@
 | 会员播放、授权失败、封面与安装问题 | [常见问题](FAQ.md) |
 | 依赖、MusicKit、自签构建、测试 | [构建指南](BUILDING.md) |
 | 页面、目录、播放和联动模块 | [开发结构](ARCHITECTURE.md) |
-| 0.7.8 做过哪些验证 | [验证记录](VERIFICATION.md) |
+| 0.7.9 做过哪些验证 | [验证记录](VERIFICATION.md) |
 | 公开源码与私有开发目录的区别 | [公开源码](PUBLIC_SOURCE.md) |
 | 数据与系统权限 | [隐私说明](../PRIVACY.md) |
 | 第三方代码、服务和资产 | [第三方说明](../THIRD_PARTY.md) |

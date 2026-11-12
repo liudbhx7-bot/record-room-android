@@ -3,7 +3,6 @@ package com.recordroom.vinyl;
 import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -11,14 +10,12 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.graphics.Typeface;
 
 /** Stationary moulded chassis and a jacket seated in its rear pocket.
  * Geometry and materials are prepared on resize, never while the platter spins. */
 final class FuguangDeck {
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
     private final Paint art = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-    private final Paint lettering = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final Path top = new Path(), seam = new Path();
     private final RectF pocket = new RectF(), sleeve = new RectF(), inward = new RectF();
     private final Matrix noiseScale = new Matrix();
@@ -40,18 +37,8 @@ final class FuguangDeck {
     }
     private final BitmapShader grainShader = new BitmapShader(grainTile(),Shader.TileMode.REPEAT,Shader.TileMode.REPEAT);
     private Shader upperLight, edgeLight, socket, jacketShading;
-    private float u, left, bottom, tilt, headerX, brandY, modelY, brandSize, modelSize;
-    private boolean showSleeve, lightCase;
-    private int baseColor = 0xff242120;
-    private final Typeface brand = Typeface.create("sans-serif",Typeface.NORMAL);
-    private final Typeface model = Typeface.create("sans-serif-light",Typeface.NORMAL);
-
-    boolean setColor(int base) {
-        if(base==baseColor) return false;
-        baseColor = base;
-        lightCase = Color.luminance(baseColor) > .34;
-        return true;
-    }
+    private float u, left, bottom, tilt;
+    private boolean showSleeve;
 
     void prepare(int width, int height, float cy, float radius, float density) {
         // u is a pixel in the 842-wide concept, scaled to the available machine, not to the screen diagonal.
@@ -74,15 +61,10 @@ final class FuguangDeck {
         noiseScale.setScale(Math.max(.72f,Math.min(1.45f,density*.72f)),Math.max(.72f,Math.min(1.45f,density*.72f)));
         grainShader.setLocalMatrix(noiseScale);
 
-        headerX = Math.min(w*.070f,26*density);
-        brandSize = Math.max(8*density,Math.min(10*density,20*u));
-        modelSize = Math.max(14*density,Math.min(19*density,37*u));
-        brandY = Math.min(38*u,17*density) + brandSize;
-        modelY = brandY + modelSize*1.28f;
-
-        // Allocate the pocket in available space ABOVE the disc. Short viewports
-        // keep the artwork recognisable without drawing through transport controls.
-        float clearTop = modelY + 10*density;
+        // Reserve the upper controls' inset before sizing the sleeve.
+        float compactInset = Math.max(8*density, Math.min(10*density, 20*u));
+        float largeInset = Math.max(14*density, Math.min(19*density, 37*u));
+        float clearTop = Math.min(38*u, 17*density) + compactInset + largeInset*1.28f + 10*density;
         bottom = Math.max(0, rear-18*u);
         // On a shorter machine the platter only reaches this height at its centre.
         // Nest the jacket into the empty upper-left shoulder; draw order naturally
@@ -92,9 +74,8 @@ final class FuguangDeck {
         if(shallow)bottom+=Math.min(radius*.29f, clearTop+desiredRise-bottom);
         float available = bottom - clearTop;
         if (available<37*density && width>=144*density) {
-            // Very shallow landscape: pair the nameplate and the jacket horizontally.
-            // The nameplate remains in the left-hand player pane, away from controls.
-            headerX=w*.56f; clearTop=7*density; available=bottom-clearTop;
+            // Use the upper-left shoulder when vertical space is scarce.
+            clearTop=7*density; available=bottom-clearTop;
         }
         showSleeve = available >= 16*density && width >= 112*density && height >= 98*density;
         if (!showSleeve) return;
@@ -121,10 +102,6 @@ final class FuguangDeck {
         p.setShader(grainShader);p.setAlpha(118);c.drawPath(top,p);p.setShader(null);p.setAlpha(255);
         p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Math.max(.65f,1.7f*u));p.setShader(edgeLight);c.drawPath(seam,p);p.setShader(null);p.setStyle(Paint.Style.FILL);
         if (showSleeve) drawJacket(c,cover);
-        lettering.setTypeface(brand);lettering.setTextSize(brandSize);lettering.setColor(lightCase?0xff413d39:0xffcfccc7);
-        c.drawText("RECORD ROOM",headerX,brandY,lettering);
-        lettering.setTypeface(model);lettering.setTextSize(modelSize);lettering.setColor(lightCase?0xff211f1d:0xfff1eee8);
-        c.drawText("浮光 01",headerX,modelY,lettering);
     }
 
     private void drawJacket(Canvas c,Bitmap cover) {
