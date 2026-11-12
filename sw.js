@@ -1,5 +1,5 @@
 const prefix = 'recordroom:' + self.registration.scope + ':';
-const cache = prefix + '29267eed02f193c2';
+const cache = prefix + '15a31b58ef68a1cd';
 const files = ["assets/catalog.json", "assets/disc-smoke-lilac-v1.png", "assets/forest-1.wav", "assets/forest-2.wav", "assets/forest-3.wav", "assets/forest-v2.png", "assets/icon-256.png", "assets/icon-512.png", "assets/needle.wav", "assets/night-1.wav", "assets/night-2.wav", "assets/night-3.wav", "assets/night-v2.png", "assets/sun-1.wav", "assets/sun-2.wav", "assets/sun-3.wav", "assets/sun-v2.png", "assets/tonearm-graphite-v1.png", "index.html", "manifest.webmanifest", "player.css", "player.js", "vendor/jsmediatags-3.9.7.min.js", "vendor/jsmediatags-license.txt"];
 self.addEventListener('install', event => event.waitUntil((async () => {
   const store = await caches.open(cache);

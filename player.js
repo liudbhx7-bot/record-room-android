@@ -110,15 +110,32 @@ async function readImports() {
   database=await openDB();
   return new Promise((resolve,reject)=>{
     const r=database.transaction('songs').objectStore('songs').getAll();
-    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+    r.onsuccess=()=>resolve(r.result.map(track=>{
+      // WebKit private and temporary document pickers may only persist structured bytes.
+      if(track.audioBytes){track.file=new Blob([track.audioBytes],{type:track.audioType});delete track.audioBytes;}
+      if(track.pictureBytes){track.picture=new Blob([track.pictureBytes],{type:track.pictureType});delete track.pictureBytes;}
+      return track;
+    }));r.onerror=()=>reject(r.error);
   });
 }
-function saveTrack(track) {
+function writeTrack(track) {
   return new Promise((resolve,reject)=>{
     const tx=database.transaction('songs','readwrite');
     tx.objectStore('songs').put(track);tx.oncomplete=resolve;
     tx.onabort=()=>reject(tx.error || new Error('存储空间不足'));
   });
+}
+async function saveTrack(track) {
+  try { await writeTrack(track); }
+  catch(error) {
+    if(error?.name==='QuotaExceededError')throw error;
+    // Safari can grant a picker File that is readable but disallows direct IDB Blob storage.
+    // A structured clone of the bytes does not retain the picker's temporary file handle.
+    const {file,picture,...metadata}=track;
+    metadata.audioType=file.type;metadata.audioBytes=await file.arrayBuffer();
+    if(picture){metadata.pictureType=picture.type;metadata.pictureBytes=await picture.arrayBuffer();}
+    await writeTrack(metadata);
+  }
 }
 function tagsFor(file) {
   return new Promise(resolve=>jsmediatags.read(file,{onSuccess:tag=>resolve(tag.tags),onError:()=>resolve({})}));
