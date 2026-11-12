@@ -9,7 +9,7 @@ const saved = {
 };
 const tracks = [];
 let sequence = [], current, sourceURL, database, pendingSeek = 0, page = '', readyOffline = false;
-let importing = false, scrub = false, lastSecond = -1;
+let importing = false, scrub = false, lastSecond = -1, playbackRequested = false;
 const fallbackArt = 'assets/icon-256.png';
 function element(tag, text, cls) {
   const node = document.createElement(tag);
@@ -164,6 +164,7 @@ async function importFiles(files) {
         const track={id,file,title:tags.title||file.name.replace(/\.[^.]+$/,''),artist:tags.artist||'未知音乐人',album:tags.album||'未分类专辑',albumArtist:tags.TPE2?.data||tags.aART?.data||tags.artist||'未知音乐人',duration};
         if(picture?.data?.length && picture.data.length<=10*1024*1024 && /^image\/(jpeg|jpg|png|webp|gif)$/i.test(picture.format))track.picture=new Blob([new Uint8Array(picture.data)],{type:picture.format});
         await saveTrack(track);tracks.push(track);count++;
+        if(!current)select(track);else updateControls();
       }catch(error){errors.push(file.name+' · '+error.message);}
     }
     if(sheet.open && ['sources','library'].includes(page)){showLibrary('','files');content.prepend(status);}
@@ -188,6 +189,10 @@ function palette(img) {
   for(const [name,value] of Object.entries({body:mix(.19,19),panel:mix(.27,33),tint:mix(.67,19),lamp:mix(.82,60)}))document.documentElement.style.setProperty('--'+name,value);
   document.querySelector('meta[name="theme-color"]').content=mix(.19,19);
 }
+function updateControls(){
+  for(const id of ['play','sleeve','artist','seek'])get(id).disabled=!current;
+  for(const id of ['prev','next'])get(id).disabled=!current || sequence.length<2;
+}
 function select(t,order=tracks,position=0) {
   audio.pause();if(sourceURL)URL.revokeObjectURL(sourceURL);sourceURL=null;current=t;sequence=order;
   saved.set('track',t.id);saved.set('position',position);pendingSeek=position;lastSecond=-1;
@@ -195,9 +200,9 @@ function select(t,order=tracks,position=0) {
   get('title').textContent=t.title;get('artist').textContent=t.artist;
   get('jacket').src=get('label').src=cover(t);get('message').textContent='';
   if('mediaSession' in navigator && typeof MediaMetadata!=='undefined')navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist,album:t.album,artwork:[{src:new URL(cover(t),document.baseURI).href}]});
-  updateTime();
+  updateTime();updateControls();
 }
-async function play(){if(!current)return;try{await audio.play();get('message').textContent='';}catch(e){if(e.name!=='AbortError')get('message').textContent='未能播放这首歌，请检查设备支持的音频格式。';}}
+async function play(){if(!current)return;playbackRequested=true;try{await audio.play();get('message').textContent='';}catch(e){if(e.name!=='AbortError')get('message').textContent='未能播放这首歌，请检查设备支持的音频格式。';}}
 function skip(dir){if(!current||!sequence.length)return;const i=sequence.findIndex(t=>t.id===current.id);select(sequence[(i+dir+sequence.length)%sequence.length],sequence);play();}
 function playing(){const on=!audio.paused;document.body.dataset.playing=String(on);get('play').setAttribute('aria-label',on?'暂停':'播放');get('play').lastElementChild.textContent=on?'PAUSE':'PLAY';if('mediaSession' in navigator)navigator.mediaSession.playbackState=on?'playing':'paused';}
 function jump(to){if(Number.isFinite(audio.duration))audio.currentTime=Math.max(0,Math.min(audio.duration,to));}
@@ -214,23 +219,43 @@ window.addEventListener('pagehide',()=>{if(current)saved.set('position',audio.cu
 if('mediaSession' in navigator)for(const [name,act] of Object.entries({play,pause:()=>audio.pause(),nexttrack:()=>skip(1),previoustrack:()=>skip(-1),seekto:e=>jump(e.seekTime)})){try{navigator.mediaSession.setActionHandler(name,act);}catch{}}
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{readyOffline=true;if(get('offline'))get('offline').textContent='已准备好离线播放。';}).catch(()=>{});}
-(async()=>{
-  let local=[];try{local=await readImports();}catch{get('message').textContent='本机存储不可用，导入功能暂不可用。';}
-  tracks.push(...local);
+async function loadDemos(preferred, priorPosition) {
+  get('retry').hidden=true;
+  if(!current)get('message').textContent='正在准备唱片…';
+  const prior=current;
   try{
     const result=await fetch('assets/catalog.json');if(!result.ok)throw new Error('catalog');
-    // Each bundled demo is a short 18 s WAV. Stable local Blob URLs avoid switching
-    // from network to worker byte ranges in the middle of the first play gesture.
-    const demos=await Promise.all((await result.json()).map(async t=>{
-      const url='assets/'+t.uri.split('/').pop();
-      const response=await fetch(url);
+    const catalog=await result.json();
+    const wanted=catalog.find(t=>t.id===preferred)?.id || catalog[0]?.id;
+    // Unlock the player as soon as the selected song has a playable local Blob.
+    // Slow or unavailable sibling demos must not hold imported files hostage.
+    const jobs=await Promise.allSettled(catalog.map(async(t,index)=>{
+      if(tracks.some(entry=>entry.id===t.id))return;
+      const url='assets/'+t.uri.split('/').pop(), response=await fetch(url);
       if(!response.ok)throw new Error('audio');
-      return {...t,url,demoBlob:await response.blob(),cover:'assets/'+t.artworkUri.split('/').pop(),duration:t.durationMs/1000};
+      const song={...t,url,demoIndex:index,demoBlob:await response.blob(),cover:'assets/'+t.artworkUri.split('/').pop(),duration:t.durationMs/1000};
+      tracks.push(song);
+      tracks.sort((a,b)=>(a.demoIndex??-1)-(b.demoIndex??-1));
+      if(t.id===wanted && (!current || (t.id===preferred && current===prior && !playbackRequested))){
+        select(song,tracks,t.id===preferred?priorPosition:0);
+      }else updateControls();
     }));
-    tracks.push(...demos);
-  }catch{if(!tracks.length)get('message').textContent='请联网打开一次以装入内置唱片。';}
-  const last=saved.get('track');
-  const track=tracks.find(t=>t.id===last)||tracks[0];
+    if(!current && tracks.length)select(tracks[0]);
+    if(!catalog.length || jobs.some(job=>job.status==='rejected'))throw new Error('incomplete');
+  }catch{
+    get('message').textContent=current?'部分内置唱片尚未载入。':'内置唱片未载入。请重新联网，或从播放工具导入音乐。';
+    get('retry').hidden=false;
+  }
+  updateControls();
+}
+get('retry').onclick=()=>loadDemos(current?.id, audio.currentTime||0);
+(async()=>{
+  const last=saved.get('track'),position=Number(saved.get('position'))||0;
   const volume=saved.get('volume');if(volume!==null&&Number.isFinite(Number(volume)))audio.volume=Math.min(1,Math.max(0,Number(volume)));
-  if(track)select(track,tracks,track.id===last?Number(saved.get('position'))||0:0);
+  try {
+    const local=await readImports();tracks.push(...local);
+    const first=local.find(t=>t.id===last)||local[0];
+    if(first)select(first,tracks,first.id===last?position:0);
+  }catch{get('message').textContent='本机存储不可用，正在准备内置唱片…';}
+  await loadDemos(last,position);
 })();
