@@ -6,34 +6,34 @@
 
 Android 原生黑胶播放器 · 封面配色 · 竖立专辑架 · 音乐人主页
 
-**0.7.7 预览版** · Android 8.0+ · ARM / ARM64
+**0.7.8 预览版** · Android 8.0+ · ARM / ARM64
 
-[**下载 Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.7.7/Record-Room-0.7.7-Android.apk) · [版本说明](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.7) · [使用指南](docs/USER_GUIDE.md) · [常见问题](docs/FAQ.md)
+[**下载 Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.7.8/Record-Room-0.7.8-Android.apk) · [版本说明](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.8) · [使用指南](docs/USER_GUIDE.md) · [常见问题](docs/FAQ.md)
 
 </div>
 
 Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音乐播放器。导入自己的音频，搜索歌曲与音乐人，翻开一张专辑，或者连接正在播放的官方音乐 App，让音乐以唱片的方式呈现。
 
-界面使用原生 Android 控件与 Canvas 绘制。盘面、底灯、背景和页面随当前封面配色；立体封套可以滑动选片、打开并抽出唱片。搜索与设置采用柔和的平面分组，半透明控件集中在播放器的悬浮操作区。
+0.7.8 将「浮光 01」作为默认唱机，直接随应用升级提供，无需购买。当前专辑的封套插在机身后方，盘心呈现同一张封面，左下盘缘透出随封面变化的光。盘面、底灯、背景和页面随当前封面配色；立体封套可以滑动选片、打开并抽出唱片。搜索与设置采用柔和的平面分组，半透明控件集中在播放器的悬浮操作区。
 
-> **当前状态：公开预览版。** 本地播放、公开曲库查询和界面交互已完成自动验证。QQ 私人账号的 VIP 全曲播放尚未确认修复；Apple Music 需要自行配置开发者令牌；OPPO Find N6 / ColorOS 真机及长时间后台表现仍待验证。完整范围见[验证记录](docs/VERIFICATION.md)。
+> **当前状态：公开预览版。** QQ 私人账号的 VIP 全曲播放尚未确认修复；Apple Music 需要自行配置开发者令牌；OPPO Find N6 / ColorOS 真机及长时间后台表现仍待验证。完整范围见[验证记录](docs/VERIFICATION.md)。
 
 ## 立即下载
 
 | 内容 | 入口 |
 | --- | --- |
-| Android 安装包 | [Record-Room-0.7.7-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.7.7/Record-Room-0.7.7-Android.apk) |
-| 版本说明与校验文件 | [v0.7.7 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.7) |
-| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.7) |
+| Android 安装包 | [Record-Room-0.7.8-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.7.8/Record-Room-0.7.8-Android.apk) |
+| 版本说明与校验文件 | [v0.7.8 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.8) |
+| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.7.8) |
 | 问题反馈 | [提交问题](https://github.com/liudbhx7-bot/record-room-android/issues/new/choose) |
 
-下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.7.7`，版本代码为 `18`。
+下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.7.8`，版本代码为 `19`。
 
 相同签名的旧版本可覆盖安装。自行编译的安装包使用自己的签名，通常不能直接覆盖本项目发布的 APK，详见[安装与更新](docs/USER_GUIDE.md#安装与更新)。当前没有应用内自动更新功能，请从 Release 下载更新。
 
 ## 界面预览
 
-下列三张来自 **0.7.7 实际安装包的 Android 模拟器**。播放器使用内置合成演示音乐；搜索与专辑页使用公开曲库，没有使用私人账号。
+左图为 **0.7.8 浮光 01** 在 Android 模拟器上的播放页，使用内置演示音频。中图与右图为 0.7.7 的公开曲库搜索与专辑展示。
 
 <table>
   <tr>
@@ -42,13 +42,13 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
     <th>打开一张专辑</th>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/player.png" width="260" alt="唱片机播放页：紫色盘面、原唱针和实体播放按钮"></td>
+    <td><img src="docs/screenshots/player.png" width="260" alt="浮光 01 播放页，深色机身、后方封套、透光盘缘与进度条"></td>
     <td><img src="docs/screenshots/search.png" width="260" alt="统一搜索页：真实音乐人头像、歌曲封面与VIP标记"></td>
     <td><img src="docs/screenshots/album-open.png" width="260" alt="音乐人专辑页：打开封套、唱片抽出、查看曲目和播放专辑入口"></td>
   </tr>
 </table>
 
-下列音乐人介绍和设置页是 **同版原生 Android 视图的固定演示数据渲染**，用于展示结构与配色，不代表私人曲库或真机截图。
+下列音乐人和设置页取自 **0.7.7 原生界面的固定演示数据**。
 
 <table>
   <tr><th>音乐人介绍</th><th>随封面变化的设置</th></tr>
@@ -63,7 +63,7 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 ![较宽显示尺寸的唱片机](docs/screenshots/wide-player.png)
 
-此图来自模拟器调整显示尺寸后的实际 APK，验证布局变化；它不是实体折叠屏的验收截图。
+此图为 0.7.8 APK 在 Android 模拟器较宽显示尺寸下的播放页。
 
 </details>
 
@@ -85,7 +85,7 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 “查得到”与“能完整播放”是两件分别核验的事。在线播放始终取决于平台返回的资源、所在地区、账号订阅与单独购买权益。
 
-| 来源 | 当前接入方式 | 0.7.7 状态 |
+| 来源 | 当前接入方式 | 支持范围 |
 | --- | --- | --- |
 | 本地音乐 | 从系统文件选择器导入，在唱片机内播放 | 已实现；使用本地演示音频验证解码、队列与播放状态。 |
 | 网易云音乐 | 账号、搜索、歌单、专辑和音乐人目录 | 已实现；公开音乐人查询、分页与头像已联网核验。私人账号使用仍需对应授权。 |
@@ -105,25 +105,14 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 [阅读完整使用指南 →](docs/USER_GUIDE.md)
 
-## 0.7.7 更新重点
+## 0.7.8 更新重点
 
-- 音乐人搜索使用真实平台 ID 与头像；同名的不同音乐人不会被按名字混为同一主页。
-- 打开专辑立即提供“查看曲目”和“播放专辑”，操作不必等装饰动画结束。
-- 修复长专辑标题裁切；窄屏和大字号下保留完整单行按钮及至少 48dp 触区。
-- 细化极深、极浅和高饱和封面的配色层次，提升盘面区分与文字可读性。
-- 隐藏页面不再持续接收进度刷新；调整显示尺寸时保留当前唱片角度。
+- 深墨色机身后方的封套与盘标同步显示当前专辑封面。唱盘的左下缘沿沟纹透光，色调取自封面。
+- 进度条左侧显示已播时间，右侧显示总时长。拖动可跳转到选定位置，官方 App 联动时依该来源开放的控制能力操作。
+- 三个实体播放键常驻。点唱机背景可切换悬浮工具，窄屏、宽屏及大字号使用对应布局。
+- 设置页底部显示实际安装版本。
 
-查看[更新记录](CHANGELOG.md)。
-
-## 已验证到什么程度
-
-本版通过 **470 项自动测试**、**13 项实际 APK 模拟器操作检查**；升级安装与全新安装各完成 **3 次冷启动**。原生界面回归包含 76 个测试类与 163 张渲染图。
-
-清理后的公开源码也已重新构建并再次通过 470 项自动测试。Release 提供原先验收的 0.7.7 APK；公开源码的导出差异与签名说明见[公开源码说明](docs/PUBLIC_SOURCE.md)。
-
-后台观察为 **45.065 秒本地测试音频**，包含锁屏切歌、暂停、恢复和返回前台；显示尺寸切换也在模拟器完成。它们不能替代真实扬声器输出、私人会员播放、OPPO / ColorOS 电源管理或长时间后台使用结论。
-
-[查看验证范围与已知问题 →](docs/VERIFICATION.md)
+[完整更新记录](CHANGELOG.md) · [本版验证范围与已知问题](docs/VERIFICATION.md)
 
 ## 开发与构建
 
@@ -155,7 +144,7 @@ cd record-room-android
 
 请勿在公开 Issue 中附带密码、Cookie、Token、私钥或含私人账号资料的日志。完整流程见[参与维护](CONTRIBUTING.md)。
 
-后续重点是 QQ 私人账号播放定位、Apple Music 真实授权与播放验证、OPPO 折叠与后台实机测试，以及已知界面细节修正。这里说明维护方向，不承诺未经验证的可用性或发布日期。
+后续重点是 QQ 私人账号播放定位、Apple Music 真实授权与播放验证、OPPO 折叠与后台实机测试。这里说明维护方向，不承诺未经验证的可用性或发布日期。
 
 ## 致谢与授权
 

@@ -53,6 +53,30 @@ public class ReferenceTurntableTest {
         view.setReferenceLayout(false);assertNotEquals("Landscape can explicitly restore compact geometry",cx,number(view,"cx"),.1);
     }
 
+    @Test public void jacketStaysOnDeckWhenRecordSpinsAndRefreshesWithRealArtwork()throws Exception{
+        TurntableView view=table();view.setMotionEnabled(false);awaitAssets();
+        Bitmap cover=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888);
+        for(int y=0;y<32;y++)for(int x=0;x<32;x++)cover.setPixel(x,y,x<16?Color.RED:Color.GREEN);
+        view.updateArtworkInPlace(cover);view.setActive(true);view.setMotionEnabled(true);view.setPlaying(true);
+        ValueAnimator spin=(ValueAnimator)field(view,"spinAnimator");assertNotNull(spin);
+        spin.setCurrentPlayTime(0);
+        Bitmap first=Bitmap.createBitmap(443,844,Bitmap.Config.ARGB_8888);view.draw(new Canvas(first));
+        spin.setCurrentPlayTime(2600);
+        Bitmap next=Bitmap.createBitmap(443,844,Bitmap.Config.ARGB_8888);view.draw(new Canvas(next));
+        int reds=0,greens=0;float discTop=number(view,"cy")-number(view,"radius")*1.12f;
+        for(int y=0;y<(int)discTop;y+=2)for(int x=0;x<225;x+=2){
+            int a=first.getPixel(x,y);boolean red=Color.red(a)-Color.green(a)>120,green=Color.green(a)-Color.red(a)>120;
+            if(red||green){assertEquals("Stationary jacket should not rotate with the centre label",a,next.getPixel(x,y));if(red)reds++;else greens++;}
+        }
+        assertTrue("Real jacket imagery must be visible above the record",reds>300&&greens>300);
+        view.updateArtworkInPlace(null);next.eraseColor(Color.TRANSPARENT);view.draw(new Canvas(next));int stale=0;
+        for(int y=0;y<(int)discTop;y+=2)for(int x=0;x<225;x+=2){
+            int col=next.getPixel(x,y);if(Math.abs(Color.red(col)-Color.green(col))>120)stale++;
+        }
+        assertEquals("No stale previous sleeve without artwork",0,stale);
+        first.recycle();next.recycle();
+    }
+
     @Test public void pauseStyleChangeAndResumeNeverRestartRecordPhase()throws Exception{
         TurntableView view=table();view.setActive(true);view.setPlaying(true);
         ValueAnimator spin=(ValueAnimator)field(view,"spinAnimator");assertNotNull(spin);spin.setCurrentPlayTime(2370);

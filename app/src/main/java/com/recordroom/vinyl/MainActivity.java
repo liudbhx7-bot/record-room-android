@@ -84,7 +84,7 @@ public final class MainActivity extends Activity {
     private PlayerService player;
     private SettingsPage settingsPage;
     private AggregateSearchPage aggregatePage;
-    private boolean bindingRegistered, libraryReady, foreground, seeking, destroyed;
+    private boolean bindingRegistered, libraryReady, foreground, destroyed;
     private FrameLayout root;
     private LinearLayout header, details, footer, hardwareRow;
     private View chromeDock, appearanceEntry;
@@ -96,9 +96,9 @@ public final class MainActivity extends Activity {
     private int searchLimit = 80;
     private String searchQuery = "";
     private TurntableView turntable;
-    private TextView title, artist, elapsed, remaining, status, subtitle;
+    private TextView title, artist, status, subtitle;
     private PlayerControls.Hardware play, previous, next;
-    private SeekBar seek;
+    private PlaybackTimeline seek, queueTimeline;
     private int ink = Color.WHITE, mutedInk = 0xffe0dce5;
     private Bitmap externalArtworkSeen;
     private int externalArtworkGeneration;
@@ -106,6 +106,7 @@ public final class MainActivity extends Activity {
     private String externalArtworkUriSignature="";
     private boolean externalArtworkLoading;
     private long externalArtworkRetryAt;
+    private String visibleSleeveKey = "";
     private String shownId = "", shownAlbumKey = "", artSignature = "", artAlbum = "";
     private String albumHighlightedId;
     private int artToken;
@@ -259,7 +260,6 @@ public final class MainActivity extends Activity {
         dismissDialogs();
         if(rebuildingShare)shareStudio=null;
         activeDraft=null;
-        seeking = false;
         buildMain(); turntable.restorePlaybackPoseFrom(previousTurntable); applyAppearance(); refresh();
         setChromeVisible(previousChrome, false);
         for (Runnable reopen : restore) reopen.run();
@@ -278,7 +278,7 @@ public final class MainActivity extends Activity {
         for (Dialog dialog : new ArrayList<>(dialogs)) dialog.dismiss();
         neteasePages.clear();providerPages.clear();albumPages.clear();sourcesDialog=null;sourcesPage=null;externalQueueTitle=null;externalQueueArtist=null;externalQueueArtwork=null;
         dialogs.clear(); pageRestorers.clear(); pageSnapshots.clear(); shelfDialog = null; appearanceDialog = null; albumDialog = null; queueDialog = null; settingsDialog = null; artistDialog = null; neteaseDialog=null;neteasePage=null; shelfRows = null; shelfSearch = null; albumStack = null; shelfSongScroll = null; shelfResults=null;handler.removeCallbacks(delayedShelfSearch);fullPages = 0;
-        queueRows = null; queueCover = null; queueCount = null; queueMode = null; pagePlayButtons.clear();
+        queueTimeline = null; queueRows = null; queueCover = null; queueCount = null; queueMode = null; pagePlayButtons.clear();
         albumAdapter=null; albumRows.clear(); albumSongs.clear(); albumDockPlay = null; albumDockCover = null;
     }
     private void trackDialog(Dialog dialog) {
@@ -293,7 +293,7 @@ public final class MainActivity extends Activity {
     private void buildMain() {
         playerSurface=null;
         root = new FrameLayout(this); root.setPadding(0, dp(12), 0, dp(12));
-        root.setBackgroundColor(ThemeStore.COLORS[1]);
+        root.setBackgroundColor(DesignSystem.deckColor(themes,albumKey()));
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             v.setPadding(insets.getSystemWindowInsetLeft(), insets.getStableInsetTop(), insets.getSystemWindowInsetRight(), Math.max(dp(8), insets.getStableInsetBottom()));
             return insets;
@@ -310,16 +310,17 @@ public final class MainActivity extends Activity {
             public void onNeedlePause() { if(usingExternal()){externalMusic.pause();refresh();}else if(player!=null)player.pausePlayback(); }
         });
         details = column();
-        title = text("唱片机", 22, ink); title.setTypeface(null, Typeface.BOLD); title.setMaxLines(2); title.setMinHeight(dp(38));title.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); title.setEllipsize(TextUtils.TruncateAt.END); title.setPadding(0, 0, dp(56), 0);
-        artist = text("正在准备唱片…", 14, mutedInk); artist.setMinHeight(dp(32));artist.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); artist.setMaxLines(1); artist.setEllipsize(TextUtils.TruncateAt.END); artist.setPadding(0, 0, dp(56), 0);
+        title = text("唱片机", 24, ink); title.setTypeface(null, Typeface.BOLD); title.setMaxLines(2); title.setMinHeight(dp(38));title.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); title.setEllipsize(TextUtils.TruncateAt.END); title.setPadding(0, 0, 0, 0);
+        artist = text("正在准备唱片…", 14, mutedInk); artist.setMinHeight(dp(32));artist.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); artist.setMaxLines(1); artist.setEllipsize(TextUtils.TruncateAt.END); artist.setPadding(0, 0, 0, 0);
         artist.setOnClickListener(v -> { if(usingExternal())openOfficial(externalMusic.getState().selectedProviderId);else if(player!=null&&player.getCurrent()!=null)showArtist(player.getCurrent()); });
         title.setOnClickListener(v -> showCurrentAlbum());
         details.addView(title, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout.LayoutParams artistParams = new LinearLayout.LayoutParams(-1, -2); artistParams.topMargin = dp(2); details.addView(artist, artistParams);
         subtitle = text("", 10, mutedInk); subtitle.setLetterSpacing(.12f); subtitle.setGravity(Gravity.START);
-        createProgressControls();
         status = text("", 12, ink); status.setVisibility(View.GONE); details.addView(status);
-        hardwareRow = row(); hardwareRow.setGravity(Gravity.CENTER_VERTICAL); hardwareRow.setPadding(0, dp(16), 0, 0);
+        seek = new PlaybackTimeline(this,false,this::seekPlayback);
+        details.addView(seek,new LinearLayout.LayoutParams(-1,-2));
+        hardwareRow = row(); hardwareRow.setGravity(Gravity.CENTER_VERTICAL); hardwareRow.setPadding(0, dp(6), 0, 0);
         play = hardwareButton("play", "播放", this::togglePlayback);
         previous = hardwareButton("previous", "上一首", () -> { previousTrack(); });
         next = hardwareButton("next", "下一首", () -> { nextTrack(); });
@@ -339,7 +340,10 @@ public final class MainActivity extends Activity {
             root.addView(turntable, new FrameLayout.LayoutParams(-1,-1));
             details.setPadding(0,0,0,0);
             FrameLayout.LayoutParams caption=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
-            caption.setMargins(dp(28),0,dp(28),dp(22));root.addView(details,caption);
+            int bottom=dp(Math.max(12,Math.min(42,config.screenHeightDp*.043f)));
+            caption.setMargins(dp(26),0,dp(26),bottom);root.addView(details,caption);
+            // Include font scaling, multi-line errors and system insets in the reserved deck space.
+            details.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->turntable.setCaptionInsetPx(b-t+bottom));
         }
         header = row();PlayerControls.Icon searchCatalog=iconButton("search","搜索在线曲库",()->showCatalogSearch(""));searchCatalog.setGlass(true);header.addView(searchCatalog);PlayerControls.Icon settings = iconButton("settings", "播放器设置", this::showSettings); settings.setGlass(true); header.addView(settings);
         FrameLayout.LayoutParams headerParams = new FrameLayout.LayoutParams(-2, dp(48), Gravity.TOP | Gravity.END); headerParams.setMargins(0, dp(4), dp(14), 0); root.addView(header, headerParams);
@@ -350,19 +354,22 @@ public final class MainActivity extends Activity {
         dockPlay = iconButton("play", "播放或暂停", () -> { togglePlayback(); scheduleChromeHide(); }); footer.addView(dockPlay);
         View divider = new View(this); divider.setBackgroundColor(0x283d3037); LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(-1, dp(1)); dividerParams.setMargins(dp(12), dp(3), dp(12), dp(3)); footer.addView(divider, dividerParams);
         footer.addView(iconButton("queue", "播放队列与进度", this::showQueue));
-        FrameLayout.LayoutParams dockParams = new FrameLayout.LayoutParams(dp(48), -2, Gravity.END | Gravity.BOTTOM); dockParams.setMargins(0, 0, dp(14), dp(16)); root.addView(dockHolder, dockParams); chromeDock = dockHolder;
-        Button appearance = quietButton("◉  外观", "唱片材质与背景", this::showAppearance); appearanceEntry = appearance;
-        FrameLayout.LayoutParams appearanceParams = new FrameLayout.LayoutParams(-2, dp(48), Gravity.START | Gravity.BOTTOM); appearanceParams.setMargins(dp(14), 0, 0, dp(20)); root.addView(appearance, appearanceParams);
+        // Keep the tool shelf clear of the timeline and of the three always-available transport keys.
+        // In wide or short windows a single horizontal strip uses less vertical space.
+        boolean strip = wide || config.screenHeightDp < 680;
+        if(strip){
+            dockHolder.setOrientation(LinearLayout.HORIZONTAL);footer.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams stripCapsule=new LinearLayout.LayoutParams(dp(48*4),dp(48));
+            stripCapsule.leftMargin=dp(6);footer.setLayoutParams(stripCapsule);
+            footer.removeView(divider);
+        }
+        FrameLayout.LayoutParams dockParams = new FrameLayout.LayoutParams(strip?-2:dp(48),-2,Gravity.END|Gravity.TOP);
+        dockParams.setMargins(0,dp(58),dp(14),0);root.addView(dockHolder,dockParams);chromeDock=dockHolder;
+        PlayerControls.Icon appearance=iconButton("palette","唱片材质与背景",this::showAppearance);appearance.setGlass(true);appearanceEntry=appearance;
+        FrameLayout.LayoutParams appearanceParams=new FrameLayout.LayoutParams(dp(48),dp(48),Gravity.TOP|Gravity.END);
+        appearanceParams.setMargins(0,dp(4),dp(110),0);root.addView(appearance,appearanceParams);
         setChromeVisible(chromeVisible, false);
         root.requestApplyInsets();
-    }
-    private void createProgressControls() {
-        seek = new SeekBar(this); seek.setMax(1000); seek.setContentDescription("播放进度"); elapsed = text("0:00", 11, mutedInk); remaining = text("−0:00", 11, mutedInk); remaining.setGravity(Gravity.END);
-        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar s, int value, boolean user) { if (user) elapsed.setText(time(playbackDuration() * value / 1000)); }
-            @Override public void onStartTrackingTouch(SeekBar s) { seeking = true; }
-            @Override public void onStopTrackingTouch(SeekBar s) { seeking = false; seekPlayback(playbackDuration() * s.getProgress() / 1000); }
-        });
     }
     private PlayerControls.Icon iconButton(String name, String description, Runnable action) {
         PlayerControls.Icon v = new PlayerControls.Icon(this, name); v.setContentDescription(description); v.setLayoutParams(new LinearLayout.LayoutParams(dp(48), dp(48))); v.setOnClickListener(w -> action.run()); return v;
@@ -373,7 +380,6 @@ public final class MainActivity extends Activity {
     private void setChromeVisible(boolean visible, boolean animate) {
         chromeVisible = visible; handler.removeCallbacks(hideChrome);
         for (View view : new View[]{header, chromeDock, appearanceEntry}) { if (view == null) continue; view.animate().cancel(); if (visible) view.setVisibility(View.VISIBLE); if (animate) view.animate().alpha(visible ? 1 : 0).setDuration(230).withEndAction(() -> { if (!chromeVisible) view.setVisibility(View.INVISIBLE); }).start(); else { view.setAlpha(visible ? 1 : 0); view.setVisibility(visible ? View.VISIBLE : View.INVISIBLE); } }
-        if (hardwareRow != null) { hardwareRow.animate().cancel(); hardwareRow.setVisibility(visible ? View.INVISIBLE : View.VISIBLE); hardwareRow.setAlpha(visible ? 0 : 1); }
         if (visible) scheduleChromeHide();
     }
     private void scheduleChromeHide() { handler.removeCallbacks(hideChrome); if (themes.autoHide() && foreground && chromeVisible && (appearanceDialog==null||!appearanceDialog.isShowing()) && isPlaybackPlaying()) handler.postDelayed(hideChrome, 6000); }
@@ -381,7 +387,7 @@ public final class MainActivity extends Activity {
     private void refresh() {
         if (destroyed || title == null) return;
         if(usingExternal()){refreshExternal();return;}
-        turntable.setNeedleSeekingEnabled(player==null||player.canSeek());play.setEnabled(true);previous.setEnabled(true);next.setEnabled(true);seek.setEnabled(player==null||player.canSeek());if(dockPlay!=null)dockPlay.setEnabled(true);
+        turntable.setNeedleSeekingEnabled(player!=null&&player.canSeek()&&playbackDuration()>0);play.setEnabled(true);previous.setEnabled(true);next.setEnabled(true);if(dockPlay!=null)dockPlay.setEnabled(true);
         Track track = player == null ? null : player.getCurrent();
         if (track != null) {
             title.setText(track.title); artist.setText(track.artist); subtitle.setText(track.album);
@@ -391,11 +397,11 @@ public final class MainActivity extends Activity {
             // Clearing the queue also invalidates any cover decode still in flight.
             // Otherwise its callback can restore an album after the player is empty.
             artToken++; artSignature = ""; shownId = ""; shownAlbumKey = "";
-            currentArtwork = null; turntable.setArtwork(null);
+            currentArtwork = null; visibleSleeveKey = ""; turntable.setArtwork(null);
             if (dockCover != null) dockCover.setArtwork(null);
             if (albumDockCover != null) albumDockCover.setArtwork(null);
             title.setText("唱片机"); artist.setText("选择一张唱片开始播放"); subtitle.setText("");
-            seeking = false; seek.setProgress(0); elapsed.setText(time(0)); remaining.setText("−" + time(0));
+            updateTimelines("",-1,-1,false);
             turntable.setProgress(0);
             if (player == null) { status.setText(""); status.setVisibility(View.GONE); }
             applyAppearance();
@@ -411,8 +417,7 @@ public final class MainActivity extends Activity {
         for(AlbumPageState page:albumPages.values()){page.adapter.setCurrent(track);page.play.setSymbol(playing?"pause":"play");}
         if (player != null) {
             long duration = player.getDurationMs(), position = player.getPositionMs();
-            if (!seeking) { seek.setProgress(duration > 0 ? (int) Math.min(1000, position * 1000 / duration) : 0); elapsed.setText(time(position)); }
-            remaining.setText("−" + time(Math.max(0, duration - position)));
+            if(track!=null)updateTimelines(currentId,position,duration,player.canSeek());
             turntable.setProgress(duration > 0 ? Math.min(1f, position / (float) duration) : 0);
             String error = player.getError();
             String message = error != null && !error.isEmpty() ? error : player.isPreparing() ? "唱针就位中…" : "";
@@ -422,8 +427,8 @@ public final class MainActivity extends Activity {
     private String albumKey() { if(usingExternal()){ExternalMusicBridge.State state=externalMusic.getState();return externalTrackKey(state);} Track t = player == null ? null : player.getCurrent(); return t == null ? "" : t.albumKey(); }
     private void applyAppearance() {applyAppearance(false);}
     private void applyAppearance(boolean animateColor) {
-        int color = stageColor();
-        DesignSystem.setAlbumTheme(this,albumKey(),color,themes.recordTint(albumKey()));
+        int color = DesignSystem.deckColor(themes,albumKey());
+        DesignSystem.setAlbumTheme(this,albumKey(),stageColor(),themes.recordTint(albumKey()));
         ArtistPage.refreshTheme(artistPage);
         if(aggregatePage!=null)aggregatePage.refreshTheme();
         styleAmbientWindow(settingsDialog);styleAmbientWindow(sourcesDialog);
@@ -431,26 +436,38 @@ public final class MainActivity extends Activity {
         for(NeteasePage page:neteasePages.values())page.refreshTheme();
         if(settingsPage!=null){Track current=player==null?null:player.getCurrent();settingsPage.update(currentArtwork,usingExternal()?externalMusic.getState().title:current==null?"":current.title,usingExternal()?externalMusic.getState().artist:current==null?"":current.artist);}
         if(playerSurface==null||playerSurfaceColor!=color){
-            android.graphics.drawable.Drawable nextSurface=DesignSystem.stage(this,color);
+            android.graphics.drawable.Drawable nextSurface=DesignSystem.surface(this,color);
             if(animateColor&&themes.motion()&&playerSurface!=null&&android.animation.ValueAnimator.areAnimatorsEnabled()){
                 android.graphics.drawable.TransitionDrawable transition=new android.graphics.drawable.TransitionDrawable(new android.graphics.drawable.Drawable[]{playerSurface,nextSurface});transition.setCrossFadeEnabled(true);root.setBackground(transition);transition.startTransition(420);FrameLayout target=root;handler.postDelayed(()->{if(!destroyed&&target==root&&target.getBackground()==transition)target.setBackground(nextSurface);},440);
             }else root.setBackground(nextSurface);
             playerSurface=nextSurface;playerSurfaceColor=color;
         }
-        turntable.setStyle(themes.disc(albumKey()));turntable.setRecordTint(themes.recordTint(albumKey()));
+        turntable.setDeckColor(color);turntable.setStyle(themes.disc(albumKey()));turntable.setRecordTint(themes.deckTint(albumKey()));
         turntable.setMotionEnabled(themes.motion()); turntable.setLighting(themes.lighting());
         if(themes.keepAwake())getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ink = readableInk(color); mutedInk = blend(ink,color,.20f);
-        title.setTextColor(ink); artist.setTextColor(mutedInk); subtitle.setTextColor(mutedInk); elapsed.setTextColor(mutedInk); remaining.setTextColor(mutedInk); status.setTextColor(ink);
+        title.setTextColor(ink); artist.setTextColor(mutedInk); subtitle.setTextColor(mutedInk); status.setTextColor(ink);
         for (int i = 0; i < header.getChildCount(); i++) if (header.getChildAt(i) instanceof TextView) ((TextView) header.getChildAt(i)).setTextColor(ink);
         for (int i = 0; i < footer.getChildCount(); i++) if (footer.getChildAt(i) instanceof TextView) ((TextView) footer.getChildAt(i)).setTextColor(ink);
-        play.setInk(ink); previous.setInk(ink); next.setInk(ink); ((TextView)appearanceEntry).setTextColor(ink);
+        play.setInk(ink); previous.setInk(ink); next.setInk(ink);
         if(queueDialog!=null&&queueDialog.isShowing()){retintQueue(queueDialog.getWindow().getDecorView());if(queueRows!=null)queueRows.setInkColor(shelfInk());}
         styleProgressControls();
+        getWindow().setStatusBarColor(color);getWindow().setNavigationBarColor(color);
         getWindow().getDecorView().setSystemUiVisibility(ink != Color.WHITE ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0);
     }
     private void retintQueue(View view){if(view instanceof TextView)((TextView)view).setTextColor(shelfInk());if(view instanceof PlayerControls.Icon)((PlayerControls.Icon)view).setInk(shelfInk());if(view instanceof android.view.ViewGroup)for(int i=0;i<((android.view.ViewGroup)view).getChildCount();i++)retintQueue(((android.view.ViewGroup)view).getChildAt(i));}
-    private void styleProgressControls() { int color = queueDialog != null && queueDialog.isShowing() ? shelfInk() : ink; elapsed.setTextColor(color); remaining.setTextColor(color); seek.setProgressTintList(android.content.res.ColorStateList.valueOf(color)); seek.setThumbTintList(android.content.res.ColorStateList.valueOf(color)); seek.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf((color & 0x00ffffff) | 0x36000000)); }
+    private void styleProgressControls() {
+        seek.ink(ink,mutedInk);
+        if(queueTimeline!=null){
+            int foreground=usingExternal()?DesignSystem.INK:shelfInk();
+            queueTimeline.ink(foreground,foreground);
+        }
+    }
+    private void updateTimelines(String identity,long position,long duration,boolean canSeek) {
+        seek.update(identity,position,duration,canSeek);
+        if(queueDialog!=null&&queueDialog.isShowing()&&queueTimeline!=null)
+            queueTimeline.update(identity,position,duration,canSeek);
+    }
     private void loadArtwork(Track t) {
         String override = themes.artwork(t.albumKey()); String uri = override != null && !override.isEmpty() ? override : t.artworkUri;
         String signature = t.albumKey() + "|" + uri;
@@ -458,7 +475,7 @@ public final class MainActivity extends Activity {
         artSignature = signature; int token = ++artToken;
 
         // Keep the old sleeve visible until the new cover is decoded for a smooth record change.
-        io.execute(() -> { Bitmap image = LocalMusicImporter.loadArtwork(this, uri, 640);AlbumPalette palette=AlbumPalette.from(image); handler.post(() -> { if (!destroyed && token == artToken) { currentArtwork = image;ArtistPage.updatePlayback(artistPage,isPlaybackPlaying(),image,player!=null);themes.coverPalette(t.albumKey(),palette);turntable.setArtwork(image);applyAppearance(true); if (dockCover != null) dockCover.setArtwork(image);for(AlbumPageState page:albumPages.values())page.cover.setArtwork(image);if(shelfDialog!=null&&shelfDialog.isShowing()){shelfDialog.getWindow().getDecorView().invalidate();renderShelf();} } }); });
+        io.execute(() -> { Bitmap image = LocalMusicImporter.loadArtwork(this, uri, 640);AlbumPalette palette=AlbumPalette.from(image); handler.post(() -> { if (!destroyed && token == artToken) { currentArtwork = image;ArtistPage.updatePlayback(artistPage,isPlaybackPlaying(),image,player!=null);themes.coverPalette(t.albumKey(),palette);showSleeve(image,"local:"+t.albumKey());applyAppearance(true); if (dockCover != null) dockCover.setArtwork(image);for(AlbumPageState page:albumPages.values())page.cover.setArtwork(image);if(shelfDialog!=null&&shelfDialog.isShowing()){shelfDialog.getWindow().getDecorView().invalidate();renderShelf();} } }); });
     }
 
     private void pickAudio() {
@@ -671,7 +688,7 @@ public final class MainActivity extends Activity {
         Dialog dialog = new PageDialog(this); dialog.setContentView(page);
         page.setOnApplyWindowInsetsListener((v, insets) -> { v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom()); return insets; });
         dialogs.add(dialog); fullPages++; if (turntable != null) turntable.setActive(false);
-        dialog.setOnDismissListener(d -> { if (!dialogs.remove(dialog)) return; pageRestorers.remove(dialog); pageSnapshots.remove(dialog); fullPages = Math.max(0, fullPages - 1); boolean album=albumPages.remove(dialog)!=null;if(album||dialog==albumDialog)restoreTopAlbum();if(dialog==queueDialog){queueDialog=null;queueRows=null;queueCover=null;queueCount=null;queueMode=null;styleProgressControls();} if (foreground && turntable != null) turntable.setActive(fullPages == 0); if (fullPages == 0) scheduleChromeHide(); });
+        dialog.setOnDismissListener(d -> { if (!dialogs.remove(dialog)) return; pageRestorers.remove(dialog); pageSnapshots.remove(dialog); fullPages = Math.max(0, fullPages - 1); boolean album=albumPages.remove(dialog)!=null;if(album||dialog==albumDialog)restoreTopAlbum();if(dialog==queueDialog){queueTimeline=null;queueDialog=null;queueRows=null;queueCover=null;queueCount=null;queueMode=null;styleProgressControls();} if (foreground && turntable != null) turntable.setActive(fullPages == 0); if (fullPages == 0) scheduleChromeHide(); });
         dialog.show(); Window window = dialog.getWindow(); if (window != null) { window.setLayout(-1, -1); window.setStatusBarColor(Color.TRANSPARENT); window.setNavigationBarColor(light ? DesignSystem.pageColor(this) : stageColor()); window.getDecorView().setSystemUiVisibility(light || shelfInk()!=Color.WHITE ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0); }
         page.requestApplyInsets(); return dialog;
     }
@@ -685,7 +702,7 @@ public final class MainActivity extends Activity {
         LinearLayout middle=row();middle.setGravity(Gravity.TOP);layout.addView(middle,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout sleeve=column();sleeve.setPadding(0,dp(30),dp(15),0);int sleeveWidth=Math.max(dp(84),Math.min(dp(200),(int)(getResources().getDisplayMetrics().widthPixels*.40f)));queueCover=new CoverView(this);queueCover.setRotationY(-22);queueCover.setRotation(-7);queueCover.setCameraDistance(dp(1200));queueCover.setElevation(dp(8));sleeve.addView(queueCover,new LinearLayout.LayoutParams(sleeveWidth-dp(16),(int)(sleeveWidth*1.25f)));TextView hint=text("UP NEXT",10,shelfInk());hint.setLetterSpacing(.18f);hint.setPadding(dp(4),dp(24),0,0);sleeve.addView(hint);middle.addView(sleeve,new LinearLayout.LayoutParams(sleeveWidth,-1));
         queueRows=new QueueListView(this);queueRows.setInkColor(shelfInk());queueRows.setAiry(true);queueRows.setActions(new QueueListView.Actions(){public void play(int at){if(player!=null){playNeedle();player.playAt(at);}}public void menu(int at){queueItemMenu(at);}public void move(int from,int to){if(player!=null){player.moveQueueItem(from,to);renderQueue();}}});middle.addView(queueRows,new LinearLayout.LayoutParams(0,-1,1));
-        createProgressControls();layout.addView(seek,new LinearLayout.LayoutParams(-1,dp(38)));LinearLayout times=row();times.setPadding(dp(15),0,dp(15),dp(8));times.addView(elapsed,new LinearLayout.LayoutParams(0,-2,1));times.addView(remaining,new LinearLayout.LayoutParams(0,-2,1));layout.addView(times);
+        queueTimeline=new PlaybackTimeline(this,true,this::seekPlayback);layout.addView(queueTimeline,new LinearLayout.LayoutParams(-1,-2));
         LinearLayout controls=row();controls.setGravity(Gravity.CENTER);controls.addView(iconButton("previous","上一首",()->{previousTrack();}));PlayerControls.Icon toggle=iconButton("play","播放或暂停",this::togglePlayback);pagePlayButtons.add(new java.lang.ref.WeakReference<>(toggle));LinearLayout.LayoutParams playParams=new LinearLayout.LayoutParams(dp(68),dp(56));playParams.setMargins(dp(18),0,dp(18),0);controls.addView(toggle,playParams);controls.addView(iconButton("next","下一首",()->{nextTrack();}));layout.addView(controls);
         tintQueueIcons(page);queueDialog=fullPage(page,false);pageRestorers.put(queueDialog,this::showQueue);pageSnapshots.put(queueDialog,()->pageState("queue"));queueSignature="";styleProgressControls();renderQueue();queueRows.scrollToCurrent();refresh();
     }
@@ -706,7 +723,7 @@ public final class MainActivity extends Activity {
     private boolean isPlaybackPlaying(){return usingExternal()?externalMusic.getState().playing:player!=null&&player.isPlaying();}
     private boolean usingExternal(){return externalMusic!=null&&!externalMusic.getState().selectedProviderId.isEmpty();}
     private long playbackDuration(){return usingExternal()?Math.max(0,externalMusic.getState().durationMs):player==null?0:player.getDurationMs();}
-    private void seekPlayback(long position){if(usingExternal()){externalMusic.seekTo(position);refresh();}else if(player!=null)player.seekTo(position);}
+    private void seekPlayback(long position){if(usingExternal()){if(externalMusic.getState().canSeek)externalMusic.seekTo(position);refresh();}else if(player!=null&&player.canSeek())player.seekTo(position);}
     private void previousTrack(){if(usingExternal()){if(!externalMusic.previous())toast("当前来源暂未开放上一首");}else if(player!=null)player.previous();}
     private void nextTrack(){if(usingExternal()){if(!externalMusic.next())toast("当前来源暂未开放下一首");}else if(player!=null)player.next();}
     private void useInternalSource(){
@@ -745,7 +762,7 @@ public final class MainActivity extends Activity {
                 }else if(songChanged){themes.coverPalette(signature,AlbumPalette.from(currentArtwork));applyAppearance(true);}
             }
         }else if(!uriSignature.isEmpty()){
-            if(songChanged){externalArtworkHash=0;setExternalArtwork(null,false,signature);}
+            if(songChanged&&!externalSleeveKey(state).equals(visibleSleeveKey)){externalArtworkHash=0;setExternalArtwork(null,false,signature);}
             if(!externalArtworkLoading&&android.os.SystemClock.uptimeMillis()>=externalArtworkRetryAt){
                 externalArtworkLoading=true;final int token=++artToken;final String key=signature,uri=state.artworkUri;
                 io.execute(()->{Bitmap bitmap=LocalMusicImporter.loadArtwork(this,uri,640);handler.post(()->{
@@ -757,14 +774,13 @@ public final class MainActivity extends Activity {
                     externalArtworkRetryAt=Long.MAX_VALUE;externalArtworkHash=ArtworkFingerprint.of(bitmap);setExternalArtwork(bitmap,false,key);
                 });});
             }
-        }else if(songChanged){externalArtworkHash=0;setExternalArtwork(null,false,signature);}
+        }else if(songChanged&&!externalSleeveKey(state).equals(visibleSleeveKey)){externalArtworkHash=0;setExternalArtwork(null,false,signature);}
         if(sourcesPage!=null)sourcesPage.update(state);
-        turntable.setNeedleSeekingEnabled(state.canSeek);play.setEnabled(state.playing?state.canPause:state.canPlay);previous.setEnabled(state.canPrevious);next.setEnabled(state.canNext);if(dockPlay!=null)dockPlay.setEnabled(state.playing?state.canPause:state.canPlay);
+        turntable.setNeedleSeekingEnabled(state.canSeek&&state.durationMs>0);play.setEnabled(state.playing?state.canPause:state.canPlay);previous.setEnabled(state.canPrevious);next.setEnabled(state.canNext);if(dockPlay!=null)dockPlay.setEnabled(state.playing?state.canPause:state.canPlay);
         play.setSymbol(state.playing?"pause":"play");play.setContentDescription(state.playing?"暂停":"播放");if(dockPlay!=null)dockPlay.setSymbol(state.playing?"pause":"play");
         for(java.lang.ref.WeakReference<PlayerControls.Icon> ref:pagePlayButtons){PlayerControls.Icon icon=ref.get();if(icon!=null){icon.setSymbol(state.playing?"pause":"play");icon.setEnabled(state.playing?state.canPause:state.canPlay);}}
         long duration=Math.max(0,state.durationMs),position=Math.max(0,state.positionMs);
-        seek.setEnabled(state.canSeek&&duration>0);if(!seeking){seek.setProgress(duration>0?(int)Math.min(1000,position*1000/duration):0);elapsed.setText(state.positionMs<0?"--:--":time(position));}
-        remaining.setText(state.durationMs<0?"--:--":"−"+time(Math.max(0,duration-position)));
+        updateTimelines(signature,state.positionMs,state.durationMs,state.canSeek);
         boolean needleEngaged=state.playing||(state.connected&&wasPlaying&&(state.playbackState==android.media.session.PlaybackState.STATE_BUFFERING||state.playbackState==android.media.session.PlaybackState.STATE_CONNECTING));
         turntable.setProgress(duration>0?Math.min(1f,position/(float)duration):0);turntable.setPlaying(needleEngaged);turntable.setActive(foreground&&fullPages==0);
         status.setText(state.statusMessage);status.setVisibility(View.VISIBLE);ArtistPage.updatePlayback(artistPage,state.playing,currentArtwork,state.playing?state.canPause:state.canPlay);
@@ -774,9 +790,19 @@ public final class MainActivity extends Activity {
     private static String externalTrackKey(ExternalMusicBridge.State state){
         return "external|"+state.selectedProviderId+"|"+(!state.mediaId.isEmpty()?state.mediaId:state.title+"|"+state.artist+"|"+state.album);
     }
+    private void showSleeve(Bitmap image,String sleeveKey){
+        if(sleeveKey.equals(visibleSleeveKey))turntable.updateArtworkInPlace(image);
+        else turntable.setArtwork(image);
+        visibleSleeveKey=sleeveKey;
+    }
+    private static String externalSleeveKey(ExternalMusicBridge.State state) {
+        return state.album.isEmpty()?externalTrackKey(state):"album:"+state.selectedProviderId+"|"+state.album;
+    }
     private void setExternalArtwork(Bitmap artwork,boolean newSong,String paletteKey){
         currentArtwork=artwork;
-        if(newSong)turntable.setArtwork(artwork);else turntable.updateArtworkInPlace(artwork);
+        String sleeveKey=externalSleeveKey(externalMusic.getState());
+        if(newSong)showSleeve(artwork,sleeveKey);
+        else { turntable.updateArtworkInPlace(artwork); visibleSleeveKey=sleeveKey; }
         if(dockCover!=null)dockCover.setArtwork(artwork);
         themes.coverPalette(paletteKey,AlbumPalette.from(artwork));
         applyAppearance(true);
@@ -805,11 +831,11 @@ public final class MainActivity extends Activity {
         if(queueDialog!=null&&queueDialog.isShowing())return;
         LinearLayout body=column();externalQueueArtwork=new ImageView(this);externalQueueArtwork.setScaleType(ImageView.ScaleType.CENTER_CROP);LinearLayout.LayoutParams art=new LinearLayout.LayoutParams(dp(160),dp(160));art.gravity=Gravity.CENTER_HORIZONTAL;body.addView(externalQueueArtwork,art);
         externalQueueTitle=text("",23,DesignSystem.INK);externalQueueTitle.setTypeface(null,Typeface.BOLD);externalQueueTitle.setPadding(0,dp(20),0,dp(5));body.addView(externalQueueTitle);externalQueueArtist=note("");body.addView(externalQueueArtist);
-        createProgressControls();body.addView(seek,new LinearLayout.LayoutParams(-1,dp(48)));LinearLayout times=row();times.addView(elapsed,new LinearLayout.LayoutParams(0,-2,1));times.addView(remaining,new LinearLayout.LayoutParams(0,-2,1));body.addView(times);
+        queueTimeline=new PlaybackTimeline(this,true,this::seekPlayback);body.addView(queueTimeline,new LinearLayout.LayoutParams(-1,-2));
         LinearLayout controls=row();controls.setGravity(Gravity.CENTER);PlayerControls.Icon prev=iconButton("previous","上一首",this::previousTrack),toggle=iconButton("play","播放或暂停",this::togglePlayback),next=iconButton("next","下一首",this::nextTrack);controls.addView(prev);controls.addView(toggle);controls.addView(next);pagePlayButtons.add(new java.lang.ref.WeakReference<>(toggle));body.addView(controls);
         body.addView(note("播放队列由官方 App 管理。"));body.addView(actionButton("在官方 App 查看队列",()->openOfficial(externalMusic.getState().selectedProviderId)));body.addView(actionButton("切换音乐来源",this::showMusicSources));
         queueDialog=sheet("正在联动",body,false);pageSnapshots.put(queueDialog,()->pageState("queue"));refreshExternal();
-        int color=DesignSystem.INK;elapsed.setTextColor(color);remaining.setTextColor(color);seek.setProgressTintList(android.content.res.ColorStateList.valueOf(color));seek.setThumbTintList(android.content.res.ColorStateList.valueOf(color));
+        styleProgressControls();
     }
     private void showSettings(){
         if(settingsDialog!=null&&settingsDialog.isShowing())return;

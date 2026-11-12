@@ -40,6 +40,12 @@ public final class DesignSystem {
         }
         return stage;
     }
+    /** The plinth stays graphite while its undertone follows the sleeve. Manual backgrounds remain exact. */
+    static int deckColor(ThemeStore themes,String album){
+        if(!themes.followCoverColors())return themes.background(album);
+        int tint=themes.deckTint(album);
+        return android.graphics.Color.alpha(tint)==0?0xff242324:mix(0xff1d1d1f,tint,.075f);
+    }
     public static Drawable stage(Context context,int color){return new Stage(color);}
     private static final java.util.ArrayList<WeakReference<Drawable>> liveSurfaces=new java.util.ArrayList<>();
     private static android.content.SharedPreferences palette(Context c){return c.getApplicationContext().getSharedPreferences("vinyl_appearance",Context.MODE_PRIVATE);}

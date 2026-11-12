@@ -63,6 +63,23 @@ public class DiscDynamicsTest {
         assertTrue(Color.blue(fallback.getPixel(x,y))>Color.red(fallback.getPixel(x,y)));
     }
 
+    @Test public void edgeLampStaysAtLowerLeftAsRecordTurns()throws Exception{
+        TurntableView view=turntable();view.setMotionEnabled(false);view.setStyle(5);view.setRecordTint(0xffec9b4d);awaitAssets();
+        float x=number(view,"cx"),y=number(view,"cy"),r=number(view,"radius");
+        int nearX=Math.round(x-r*.789f),nearY=Math.round(y+r*.575f);
+        int farX=Math.round(x+r*.789f),farY=Math.round(y-r*.575f);
+        for(float rotation:new float[]{0f,125f}){
+            setField(view,"rotation",rotation);view.setLighting(0);
+            Bitmap off=render(view,"lumen-lamp-off-"+(int)rotation+".png");
+            view.setLighting(1);Bitmap lit=render(view,"lumen-lamp-on-"+(int)rotation+".png");
+            assertTrue("The same physical lip should light at every record angle",
+                    Color.red(lit.getPixel(nearX,nearY))-Color.red(off.getPixel(nearX,nearY))>45);
+            assertTrue("The opposite rim is not an LED ring",
+                    Math.abs(Color.red(lit.getPixel(farX,farY))-Color.red(off.getPixel(farX,farY)))<8);
+            lit.recycle();off.recycle();
+        }
+    }
+
     @Test public void contactScaleStartsWhenNeedleReachesRecordAndLiftRestoresWithoutMovingHitGeometry()throws Exception{
         TurntableView view=turntable();view.setActive(true);
         float[] geometry={number(view,"cx"),number(view,"cy"),number(view,"radius"),number(view,"pivotX"),number(view,"pivotY")};
@@ -92,17 +109,22 @@ public class DiscDynamicsTest {
         assertNull(field(view,"recordScaleAnimator"));assertEquals(1f,number(view,"recordScale"),.0001f);assertFalse((Boolean)field(view,"playing"));
     }
 
-    @Test public void clearPlinthIsVisibleOutsideRecordYetKeepsUnderlyingSurfaceReadable()throws Exception{
-        TurntableView view=turntable();view.setMotionEnabled(false);view.setStyle(8);view.setRecordTint(0xff9a88bb);awaitAssets();
-        Bitmap bitmap=render(view,"record-clear-glass-plinth-native.png");
-        float cx=number(view,"cx"),cy=number(view,"cy"),r=number(view,"radius");
-        // This corner lies beyond both the record and its radial shadow, within the glass slab.
-        float[] point=point(cx,cy,r*.75f,r*.92f,-3);int pixel=bitmap.getPixel(Math.round(point[0]),Math.round(point[1]));
-        assertNotEquals("Glass must have a subtle visible edge/body, not be absent",DesignSystem.LILAC,pixel);
-        assertTrue(Math.abs(Color.red(pixel)-Color.red(DesignSystem.LILAC))<20);
-        assertTrue(Math.abs(Color.green(pixel)-Color.green(DesignSystem.LILAC))<20);
-        assertTrue(Math.abs(Color.blue(pixel)-Color.blue(DesignSystem.LILAC))<20);
-        assertEquals("Glass cannot cover the whole screen",DesignSystem.LILAC,bitmap.getPixel(5,5));
+    @Test public void raisedDeckRetainsTheChosenChassisFinish()throws Exception{
+        TurntableView view=turntable();view.setMotionEnabled(false);view.setStyle(8);awaitAssets();
+        // Measure the moulded upper surface, above the sleeve and away from the lettering.
+        Bitmap lilac=render(view,"fuguang-upper-deck-manual-native.png");
+        Bitmap charcoal=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);
+        Canvas c=new Canvas(charcoal);c.drawColor(0xff252220);view.draw(c);
+        int changed=0,n=0;
+        for(int y=3;y<22;y+=2)for(int x=210;x<370;x+=2){
+            int a=lilac.getPixel(x,y),b=charcoal.getPixel(x,y);
+            if(a!=DesignSystem.LILAC)changed++;
+            assertTrue("A manually selected finish must still tint the moulded ledge",
+                    Color.blue(a)-Color.blue(b)>40);n++;
+        }
+        assertTrue("Raised deck needs visible local shading",changed>n/2);
+        assertEquals("The parent finish remains visible below the deck",DesignSystem.LILAC,lilac.getPixel(3,view.getHeight()-3));
+        lilac.recycle();charcoal.recycle();
     }
 
     private TurntableView turntable()throws Exception{TurntableView view=new TurntableView(activity);host.addView(view,new FrameLayout.LayoutParams(390,440));layout(host,390,844);layout(view,390,440);awaitAssets();return view;}

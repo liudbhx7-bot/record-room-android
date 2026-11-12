@@ -58,7 +58,7 @@ public class PurePlayerIntegrationTest {
         service.get().setQueue(new ArrayList<>(tracks),0,false);call("refresh");drain();
         ThemeStore themes=(ThemeStore)main("themes");assertTrue(themes.followCoverColors());
         int firstBackground=(Integer)main("playerSurfaceColor"),firstTint=themes.recordTint(first.albumKey());assertNotEquals(Color.TRANSPARENT,firstTint);
-        AlbumPalette expected=AlbumPalette.from((android.graphics.Bitmap)main("currentArtwork"));assertEquals(DesignSystem.stageColor(themes,first.albumKey()),firstBackground);assertEquals(expected.record,firstTint);
+        AlbumPalette expected=AlbumPalette.from((android.graphics.Bitmap)main("currentArtwork"));assertEquals(DesignSystem.deckColor(themes,first.albumKey()),firstBackground);assertTrue("Automatic graphite deck stays dark",Color.luminance(firstBackground)<.06);assertEquals(expected.record,firstTint);
         int index=tracks.indexOf(second);service.get().setQueue(new ArrayList<>(tracks),index,false);call("refresh");drain();
         assertNotEquals(firstBackground,(int)(Integer)main("playerSurfaceColor"));assertNotEquals(firstTint,themes.recordTint(second.albumKey()));
         assertFalse(service.get().isPlaying());assertEquals(tracks.size(),service.get().getQueueSize());assertEquals(second.id,service.get().getCurrent().id);

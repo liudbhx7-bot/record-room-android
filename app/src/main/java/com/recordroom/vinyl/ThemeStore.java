@@ -40,12 +40,20 @@ final class ThemeStore {
         if(album!=null&&album.equals(prefs.getString("cover_palette_album",null)))return prefs.getInt("cover_palette_record",Color.TRANSPARENT);
         return Color.TRANSPARENT;
     }
+    int deckTint(String album) {
+        if(!followCoverColors()) return Color.TRANSPARENT;
+        AlbumPalette palette; synchronized(coverPalettes){palette=coverPalettes.get(album);}
+        if(palette!=null) return palette.deckLight;
+        if(album!=null && album.equals(prefs.getString("cover_palette_album",null)))
+            return prefs.getInt("cover_palette_lamp",recordTint(album));
+        return Color.TRANSPARENT;
+    }
     void coverPalette(String album,AlbumPalette palette){
         if(album==null||album.isEmpty()||palette==null)return;
         synchronized(coverPalettes){coverPalettes.put(album,palette);}
-        if(album.equals(prefs.getString("cover_palette_album",null))&&prefs.getInt("cover_palette_background",0)==palette.background&&prefs.getInt("cover_palette_record",0)==palette.record)return;
+        if(album.equals(prefs.getString("cover_palette_album",null))&&prefs.getInt("cover_palette_background",0)==palette.background&&prefs.getInt("cover_palette_record",0)==palette.record&&prefs.getInt("cover_palette_lamp",0)==palette.deckLight)return;
         // Only the current palette is persisted. Large libraries do not grow the preferences file.
-        prefs.edit().putString("cover_palette_album",album).putInt("cover_palette_background",palette.background).putInt("cover_palette_record",palette.record).apply();
+        prefs.edit().putString("cover_palette_album",album).putInt("cover_palette_background",palette.background).putInt("cover_palette_record",palette.record).putInt("cover_palette_lamp",palette.deckLight).apply();
     }
     void save(String album, boolean specific, int disc, int color) {
         String k = specific && album != null ? key(album) : "";

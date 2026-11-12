@@ -16,7 +16,7 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.graphics.SweepGradient;
+
 import android.os.Bundle;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
@@ -49,15 +49,17 @@ public final class TurntableView extends View {
     private final Paint texturePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint tonearmPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint tonearmShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final FuguangDeck cabinet = new FuguangDeck();
+    private int captionInsetPx;
     private final RectF oval = new RectF();
     private final RectF tonearmBounds = new RectF();
-    private final RectF plinthBounds = new RectF();
     private final Path arm = new Path(), platterRing = new Path();
     private final Matrix artMatrix = new Matrix(), materialMatrix = new Matrix();
     private final int touchSlop;
     private Bitmap recordTexture, artwork, pendingArtwork, tonearmTexture;
     private BitmapShader artShader, materialShader;
-    private Shader bodyShader, reflection, shadowShader, armShader, mountShader, plinthShader, underlightShader, transmittedLightShader;
+    private Shader armShader, mountShader;
+    private final LumenVinyl resin = new LumenVinyl();
     private float cx, cy, radius, rotation, fraction, pivotX, pivotY;
     private float armAngle, armGoal, lighting = .7f, artworkAlpha = 1f, needlePreviewFraction;
     private float recordScale = 1f, recordScaleGoal = 1f;
@@ -92,6 +94,16 @@ public final class TurntableView extends View {
         referenceLayout = enabled;
         rebuild(); invalidate();
     }
+    /** Actual lower-caption extent, including safe gap; only constrains portrait geometry. */
+    public void setCaptionInsetPx(int px) {
+        int next = Math.max(0,px);
+        if (captionInsetPx == next) return;
+        captionInsetPx=next;
+        if (referenceLayout) {rebuild(); invalidate();}
+    }
+    /** Keep faceplate lettering readable when users select a light manual finish. */
+    public void setDeckColor(int color) { if(cabinet.setColor(color)) invalidate(); }
+
     private float labelRatio() { return referenceLayout ? .455f : DesignSystem.RECORD_LABEL_RATIO; }
     public void setNeedleListener(NeedleListener listener) { needleListener = listener; }
     /** Disable needle manipulation when the current source cannot seek; ordinary clicks still work. */
@@ -385,35 +397,23 @@ public final class TurntableView extends View {
             // Centre the platter within the listening area, with room below for title and controls.
             cy = Math.max(radius + DesignSystem.dp(getContext(),28),
                     Math.min(getHeight() * .44f,getHeight()-radius-DesignSystem.dp(getContext(),158)));
+            if(captionInsetPx>0) {
+                float floor=Math.max(dp(18),getHeight()-captionInsetPx-dp(7));
+                float overhead=Math.min(dp(77),floor*.26f);
+                radius=Math.max(1,Math.min(radius,(floor-overhead)/2.05f));
+                cy=Math.max(overhead+radius,Math.min(getHeight()*.44f,floor-radius*1.035f));
+            }
             pivotX = cx + radius * (194.15f / 195f);
             pivotY = cy - radius * (146f / 195f);
         } else {
-            radius = Math.min(getWidth() * .45f, getHeight() * .44f);
-            cx = getWidth() * .42f; cy = getHeight() * .54f;
+            // The wide layout has a separate transport column. Reserve space above the
+            // deck for its stationary jacket instead of placing it behind a spinning disc.
+            radius = Math.min(getWidth() * .425f, getHeight() * .345f);
+            cx = getWidth() * .452f; cy = getHeight() * .59f;
             pivotX = cx + radius * 1.075f; pivotY = cy - radius * .88f;
         }
-        int color = recordTintEnabled ? DiscMaterials.tintedColor(disc, recordTint) : DiscMaterials.color(disc);
-        float[] lightHsv=new float[3];android.graphics.Color.colorToHSV(recordTintEnabled?recordTint:color,lightHsv);
-        lightHsv[1]=Math.min(.66f,lightHsv[1]);lightHsv[2]=1f;
-        int lightRgb=android.graphics.Color.HSVToColor(lightHsv)&0x00ffffff;
-        underlightShader=new RadialGradient(cx,cy+radius*.07f,radius*1.23f,
-                new int[]{lightRgb,0x12000000|lightRgb,0x64000000|lightRgb,0x16000000|lightRgb,lightRgb},
-                new float[]{0,.70f,.82f,.93f,1},Shader.TileMode.CLAMP);
-        transmittedLightShader=new RadialGradient(cx,cy+radius*.22f,radius,
-                new int[]{0x60ffffff,0x46000000|lightRgb,0x08000000|lightRgb,lightRgb},
-                new float[]{0,.58f,.90f,1},Shader.TileMode.CLAMP);
-        int base = disc == 0 ? 0xff08090a : (color & 0x00ffffff) | 0x16000000;
-        bodyShader = new RadialGradient(cx, cy, radius,
-                new int[]{base, base, disc == 0 ? 0xff111214 : (color & 0x00ffffff) | 0x20000000},
-                new float[]{0, .78f, 1}, Shader.TileMode.CLAMP);
-        shadowShader = new RadialGradient(cx, cy + radius * .045f, radius * 1.075f,
-                new int[]{0x24000000, 0x30000000, 0x12000000, 0x00000000}, new float[]{0, .86f, .96f, 1}, Shader.TileMode.CLAMP);
-        reflection = new SweepGradient(cx, cy,
-                new int[]{0x00ffffff, 0x16ffffff, 0x00ffffff, 0x00ffffff, 0x10ffffff, 0x00ffffff},
-                new float[]{0, .1f, .22f, .48f, .68f, 1});
-        plinthBounds.set(cx-radius*1.04f,cy-radius*.94f,cx+radius*1.21f,cy+radius*1.08f);
-        plinthShader = new LinearGradient(plinthBounds.left,plinthBounds.top,plinthBounds.right,plinthBounds.bottom,
-                new int[]{0x18ffffff,0x06ffffff,0x10ffffff},new float[]{0,.48f,1},Shader.TileMode.CLAMP);
+        cabinet.prepare(getWidth(),getHeight(),cy,radius,getResources().getDisplayMetrics().density);
+        resin.prepare(cx, cy, radius, recordTintEnabled ? recordTint : DiscMaterials.color(disc), disc == 0, recordTintEnabled);
         boolean darkArm = disc != 0;
         armShader = new LinearGradient(-radius * .018f, 0, radius * .022f, 0,
                 darkArm ? new int[]{0xff080a09, 0xff292e2b, 0xff363b37, 0xff0b0d0b}
@@ -430,29 +430,20 @@ public final class TurntableView extends View {
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (radius <= 0) return;
-        if (!referenceLayout) drawPlinth(canvas);
+        cabinet.draw(canvas,artwork);
         int scaledRecord = canvas.save(); canvas.scale(recordScale,recordScale,cx,cy);
         int recordLayer=-1;
         if(artworkChanging){recordLayer=canvas.saveLayerAlpha(cx-radius*1.12f,cy-radius*1.12f,cx+radius*1.12f,cy+radius*1.18f,Math.round(artworkAlpha*255));float scale=.97f+.03f*artworkAlpha;canvas.scale(scale,scale,cx,cy);}
-        p.setStyle(Paint.Style.FILL); p.setAlpha(255); p.setShader(shadowShader);
-        canvas.drawCircle(cx, cy + radius * .045f, radius * 1.075f, p);
-        if(lighting>0){
-            p.setShader(underlightShader);p.setAlpha(Math.round(lighting*235));
-            canvas.drawCircle(cx,cy+radius*.07f,radius*1.23f,p);
-            p.setShader(null);p.setAlpha(255);
-        }
-        p.setShader(bodyShader); canvas.drawCircle(cx, cy, radius, p); p.setShader(null);
+        resin.drawBase(canvas, lighting);
         canvas.save(); canvas.rotate(rotation + (referenceLayout ? -21.5f : 0), cx, cy);
         if (materialShader != null) {
-            texturePaint.setAlpha(DiscMaterials.alpha(disc));
-            // A circle, rather than a square bitmap blit, clips stray generated fringe pixels precisely.
+            // Pigment rotates in the pressing; reflected light and the deck lamp do not.
+            float pigment = recordTintEnabled ? (disc == 5 ? .08f : .29f) : .80f;
+            texturePaint.setAlpha(Math.round(DiscMaterials.alpha(disc) * pigment));
             canvas.drawCircle(cx, cy, radius, texturePaint);
-        } else {
-            p.setColor(recordTintEnabled ? DiscMaterials.tintedColor(disc,recordTint) : DiscMaterials.color(disc)); p.setAlpha(DiscMaterials.alpha(disc));
-            canvas.drawCircle(cx, cy, radius, p);
         }
-        if(lighting>0&&disc!=0){p.setShader(transmittedLightShader);p.setAlpha(Math.round(lighting*210));canvas.drawPath(platterRing,p);p.setShader(null);p.setAlpha(255);}
-        p.setColor(disc == 0 ? 0xff111113 : 0xff302641); canvas.drawCircle(cx, cy, radius * (referenceLayout ? .46f : .425f), p);
+        p.setShader(null); p.setStyle(Paint.Style.FILL);
+        p.setColor(0xff201d1e); canvas.drawCircle(cx, cy, radius * (referenceLayout ? .46f : .425f), p);
         if (artShader != null) {
             artworkPaint.setAlpha(255);
             canvas.drawCircle(cx, cy, radius * labelRatio(), artworkPaint);
@@ -462,30 +453,10 @@ public final class TurntableView extends View {
             canvas.drawArc(oval, 180, 180, true, p);
         }
         canvas.restore();
-        p.setColor(Math.round((1 - lighting) * 22) << 24); canvas.drawPath(platterRing, p);
-        p.setShader(reflection); p.setAlpha(Math.round(255 * (.35f + lighting * .65f)));
-        canvas.drawPath(platterRing, p); p.setShader(null);
-        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(Math.max(.6f, radius * .003f));
-        p.setColor(disc == 0 ? 0xff0c0d0e : 0x7ff4e9e4); canvas.drawCircle(cx, cy, radius * .995f, p);
-        p.setStyle(Paint.Style.FILL); p.setColor(0x88423c42); canvas.drawCircle(cx, cy, radius * .0085f, p);
-        p.setColor(0xb9d4d0c6); canvas.drawCircle(cx - radius * .002f, cy - radius * .002f, radius * .003f, p);
+        resin.drawSurface(canvas, platterRing, lighting);
         if(recordLayer>=0)canvas.restoreToCount(recordLayer);
         canvas.restoreToCount(scaledRecord);
         drawArm(canvas);
-    }
-    private void drawPlinth(Canvas canvas) {
-        int save=canvas.save();canvas.rotate(-3,cx,cy);
-        float corner=Math.max(dp(14),radius*.085f);
-        // Low-alpha, crisp edges suggest clear glass without an opaque card beneath the record.
-        p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(0x06000000);
-        canvas.save();canvas.translate(radius*.007f,radius*.022f);
-        canvas.drawRoundRect(plinthBounds,corner,corner,p);canvas.restore();
-        p.setAlpha(255);p.setShader(plinthShader);canvas.drawRoundRect(plinthBounds,corner,corner,p);p.setShader(null);
-        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(.7f));p.setColor(0x35ffffff);
-        canvas.drawRoundRect(plinthBounds,corner,corner,p);
-        p.setStrokeWidth(dp(.55f));p.setColor(0x0c29272e);
-        canvas.drawLine(plinthBounds.left+corner,plinthBounds.bottom+dp(1),plinthBounds.right-corner,plinthBounds.bottom+dp(1),p);
-        p.setStyle(Paint.Style.FILL);p.setAlpha(255);canvas.restoreToCount(save);
     }
     private void drawArm(Canvas canvas) {
         if(tonearmTexture!=null&&!tonearmTexture.isRecycled()){

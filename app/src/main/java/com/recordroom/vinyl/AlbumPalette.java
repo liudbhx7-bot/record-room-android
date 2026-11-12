@@ -8,6 +8,7 @@ public final class AlbumPalette {
     public final int background;
     public final int record;
     public final int accent;
+    public final int deckLight;
     // Actual pixel reads, retained for bounded-work verification without bitmap mocks.
     final int sampledPixels;
     private static final int MAX_SAMPLES = 4096;
@@ -15,6 +16,10 @@ public final class AlbumPalette {
     private static final double MIN_COLOR_SHARE = .22;
 
     private AlbumPalette(int background, int record, int accent, int sampledPixels) {
+        this(background, record, accent, sampledPixels, record);
+    }
+    private AlbumPalette(int background, int record, int accent, int sampledPixels, int deckLight) {
+        this.deckLight = deckLight;
         this.background = background;
         this.record = record;
         this.accent = accent;
@@ -37,6 +42,9 @@ public final class AlbumPalette {
             columns = Math.min(width, MAX_SAMPLES / rows);
             double[] weights = new double[BINS], saturation = new double[BINS];
             double[] value = new double[BINS], hueX = new double[BINS], hueY = new double[BINS];
+            // Issued by the same bounded pixel pass: dark covers often carry their light
+            // colour in a window, sign or reflection rather than in the largest shadow.
+            double[] lightScore=new double[BINS], lightArea=new double[BINS], lx=new double[BINS], ly=new double[BINS];
             double total = 0, brightness = 0;
             float[] hsv = new float[3];
             for (int row = 0; row < rows; row++) {
@@ -58,6 +66,12 @@ public final class AlbumPalette {
                     weights[bin] += weight;
                     saturation[bin] += weight * hsv[1];
                     value[bin] += weight * hsv[2];
+                    if (hsv[1] >= .22f && hsv[2] >= .32f) {
+                        double v=hsv[2], luma=(.2126*Color.red(color)+.7152*Color.green(color)+.0722*Color.blue(color))/255;
+                        double score=weight*v*v*v*hsv[1]*(.3+.7*luma);
+                        lightScore[bin]+=score; lightArea[bin]+=weight;
+                        lx[bin]+=score*Math.cos(angle); ly[bin]+=score*Math.sin(angle);
+                    }
                     hueX[bin] += weight * Math.cos(angle);
                     hueY[bin] += weight * Math.sin(angle);
                 }
@@ -81,10 +95,21 @@ public final class AlbumPalette {
             float hue = (float) ((Math.toDegrees(Math.atan2(sy, sx)) + 360) % 360);
             float sourceSaturation = (float) (sat / bestWeight);
             float sourceValue = (float) (val / bestWeight);
+            int recordColor=hsv(hue, .18f + .34f * sourceSaturation, .82f + .16f * sourceValue);
+            double top=0; int lamp=recordColor;
+            for(int i=0;i<BINS;i++) {
+                int a=(i+BINS-1)%BINS,b=(i+1)%BINS;
+                if(lightArea[a]+lightArea[i]+lightArea[b]<total*.055)continue; // ignore dust, text and tiny logos
+                double score=lightScore[a]+lightScore[i]+lightScore[b];
+                if(score<=top)continue;
+                top=score;
+                float lightHue=(float)((Math.toDegrees(Math.atan2(ly[a]+ly[i]+ly[b],lx[a]+lx[i]+lx[b]))+360)%360);
+                lamp=hsv(lightHue,.48f+.32f*sourceSaturation,.94f);
+            }
             return new AlbumPalette(
                     hsv(hue, .08f + .09f * sourceSaturation, .97f),
-                    hsv(hue, .18f + .34f * sourceSaturation, .82f + .16f * sourceValue),
-                    hsv(hue, .20f + .35f * sourceSaturation, .22f + .10f * sourceValue), reads);
+                    recordColor,
+                    hsv(hue, .20f + .35f * sourceSaturation, .22f + .10f * sourceValue), reads, lamp);
         } catch (IllegalStateException unavailable) {
             // A shared cover may have been recycled between the check and a pixel read.
             return fallback(reads);

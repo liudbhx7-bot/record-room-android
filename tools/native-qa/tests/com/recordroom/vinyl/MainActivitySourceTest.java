@@ -134,7 +134,10 @@ public class MainActivitySourceTest {
         assertTrue("Player must be visible for the replacement animation",view.isShown());
         session.playbackState=PlaybackState.STATE_PLAYING;session.songId="genuinely-new-song";
         session.artwork=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888);session.artwork.eraseColor(0xff46c27d);session.changed.run();
-        assertEquals("A different song and sleeve still animate the real record replacement",true,field(view,"artworkChanging"));
+        assertEquals("A different pressing image on the same album updates without lifting",false,field(view,"artworkChanging"));
+        session.albumTitle="下一张唱片";session.songId="other-album-song";
+        session.artwork=Bitmap.createBitmap(32,32,Bitmap.Config.ARGB_8888);session.artwork.eraseColor(0xff94ad04);session.changed.run();
+        assertEquals("Changing album and sleeve still animates the replacement",true,field(view,"artworkChanging"));
     }
 
     @Test public void rebuildingLayoutRetainsCenterCoverAndNewBufferingSourceDoesNotInheritOldSpin()throws Exception{
@@ -171,6 +174,23 @@ public class MainActivitySourceTest {
         assertTrue(((View)main("seek")).isEnabled());assertTrue(((View)main("play")).isEnabled());assertEquals(true,field(view,"needleSeekingEnabled"));
         ((View)main("play")).performClick();assertEquals(1,service().toggleCalls);
         assertEquals("Local playback never sends another external command",1,session.commands.size());
+    }
+
+    @Test public void returningFromQueueKeepsTheDeckTimelineAttachedAndAccessible()throws Exception{
+        PlaybackTimeline deck=(PlaybackTimeline)main("seek");
+        assertSame(activity.getWindow().getDecorView(),deck.slider.getRootView());
+        call("showQueue");drain();Dialog dialog=(Dialog)main("queueDialog");
+        PlaybackTimeline queue=(PlaybackTimeline)main("queueTimeline");
+        assertNotSame(deck.slider,queue.slider);
+        assertSame(dialog.getWindow().getDecorView(),queue.slider.getRootView());
+        dialog.dismiss();drain();
+        assertSame(activity.getWindow().getDecorView(),deck.slider.getRootView());
+        assertNull(main("queueTimeline"));
+        android.os.Bundle target=new android.os.Bundle();
+        target.putFloat(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE,500f);
+        int count=service().seekCalls;
+        assertTrue(deck.slider.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(),target));
+        assertEquals("TalkBack seek reaches the owned service without a touch gesture",count+1,service().seekCalls);
     }
 
     @Test public void revocationAndActivityPauseResumeClearExternalDataAndBalanceObservers()throws Exception{
@@ -245,12 +265,12 @@ public class MainActivitySourceTest {
         public Intent launchIntent(String name){return installed?new Intent(Intent.ACTION_MAIN).setPackage(name):null;}
     }
     private static final class FakeSession implements ExternalMusicBridge.Session{
-        Bitmap artwork=Bitmap.createBitmap(24,24,Bitmap.Config.ARGB_8888); String lyric="",songId="stable-song-123",songTitle="会话中的歌曲",artUri="",pkg="com.tencent.qqmusic"; int playbackState=PlaybackState.STATE_PLAYING;
+        Bitmap artwork=Bitmap.createBitmap(24,24,Bitmap.Config.ARGB_8888); String lyric="",songId="stable-song-123",songTitle="会话中的歌曲",albumTitle="会话中的专辑",artUri="",pkg="com.tencent.qqmusic"; int playbackState=PlaybackState.STATE_PLAYING;
         final List<String> commands=new ArrayList<>();Runnable changed,destroyed;int unsubscribes;
         long actions=PlaybackState.ACTION_PLAY|PlaybackState.ACTION_PAUSE|PlaybackState.ACTION_SKIP_TO_PREVIOUS|PlaybackState.ACTION_SKIP_TO_NEXT|PlaybackState.ACTION_SEEK_TO;
         FakeSession(){artwork.eraseColor(0xff33678f);}
         public String packageName(){return pkg;}public Object token(){return "activity-test-session-"+pkg;}
-        public MediaMetadata metadata(){return new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_MEDIA_ID,songId).putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE,lyric).putString(MediaMetadata.METADATA_KEY_TITLE,songTitle).putString(MediaMetadata.METADATA_KEY_ARTIST,"会话中的音乐人").putString(MediaMetadata.METADATA_KEY_ALBUM,"会话中的专辑").putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART,artwork).putString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI,artUri).putLong(MediaMetadata.METADATA_KEY_DURATION,120000).build();}
+        public MediaMetadata metadata(){return new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_MEDIA_ID,songId).putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE,lyric).putString(MediaMetadata.METADATA_KEY_TITLE,songTitle).putString(MediaMetadata.METADATA_KEY_ARTIST,"会话中的音乐人").putString(MediaMetadata.METADATA_KEY_ALBUM,albumTitle).putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART,artwork).putString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI,artUri).putLong(MediaMetadata.METADATA_KEY_DURATION,120000).build();}
         public PlaybackState playback(){return new PlaybackState.Builder().setState(playbackState,10000,1,0).setActions(actions).build();}
         public void subscribe(Runnable change,Runnable destroy){changed=change;destroyed=destroy;}public void unsubscribe(){unsubscribes++;}
         public void play(){commands.add("play");}public void pause(){commands.add("pause");}public void previous(){commands.add("previous");}public void next(){commands.add("next");}public void seekTo(long position){commands.add("seek:"+position);}public boolean toggle(){commands.add("toggle");return true;}

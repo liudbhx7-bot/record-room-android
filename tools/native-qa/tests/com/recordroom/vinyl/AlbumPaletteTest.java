@@ -18,6 +18,19 @@ import static org.junit.Assert.*;
 @Config(sdk=34)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class AlbumPaletteTest {
+    @Test public void lampFindsTheLitWindowWithoutChangingTheBlueNightPalette(){
+        Bitmap cover=solid(100,100,0xff18243d);
+        try {
+            fill(cover,20,20,55,65,0xffe08a31);
+            AlbumPalette palette=AlbumPalette.from(cover);
+            assertTrue("The UI keeps the blue night sky",Color.blue(palette.record)>Color.red(palette.record));
+            assertTrue("The lamp takes its gold from the window",Color.red(palette.deckLight)>Color.blue(palette.deckLight)+80);
+            cover.eraseColor(0xff18243d);
+            fill(cover,1,1,6,6,0xffff8800);
+            assertTrue("A tiny logo cannot tint the entire lamp",Color.blue(AlbumPalette.from(cover).deckLight)>Color.red(AlbumPalette.from(cover).deckLight));
+        } finally {cover.recycle();}
+    }
+
     @Test public void redAndBlueCoversProduceDifferentReadableRelatedPalettes() throws Exception {
         Bitmap red = cover(0xffd32732), blue = cover(0xff215fd3), gray = solid(100,100,0xff888888);
         try {
