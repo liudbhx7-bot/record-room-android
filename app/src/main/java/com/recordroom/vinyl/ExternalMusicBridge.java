@@ -45,7 +45,8 @@ public final class ExternalMusicBridge implements AutoCloseable {
     private static final List<Provider> PROVIDERS = Collections.unmodifiableList(Arrays.asList(
             new Provider("qq_music", "QQ音乐", "com.tencent.qqmusic"),
             new Provider("qishui_music", "汽水音乐", "com.luna.music"),
-            new Provider("apple_music", "Apple Music", "com.apple.android.music")));
+            new Provider("apple_music", "Apple Music", "com.apple.android.music"),
+            new Provider("netease_music", "网易云音乐", "com.netease.cloudmusic")));
 
     public static List<Provider> providers() { return PROVIDERS; }
     public static Provider providerForId(String id) {

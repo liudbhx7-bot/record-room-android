@@ -105,6 +105,117 @@ public class MainActivitySourceTest {
         assertEquals(internalQueue,service().getQueue());
     }
 
+    @Test public void linkedControlsSoundOnlyForAcceptedContactsAndKeepTheSelectedSession() throws Exception {
+        session.playbackState = PlaybackState.STATE_PAUSED;
+        chooseQqThroughPage();
+        call("returnToPlayer");
+        new ThemeStore(activity).needleSound(true);
+        android.media.SoundPool real = (android.media.SoundPool)field(main("needleSound"), "pool");
+        org.robolectric.shadows.ShadowSoundPool pool = Shadows.shadowOf(real);
+        pool.notifyResourceLoaded(R.raw.needle, true);
+        ((View)main("play")).performClick();
+        assertEquals(1, pool.getResourcePlaybacks(R.raw.needle).size());
+        session.playbackState = PlaybackState.STATE_PLAYING;
+        session.changed.run();
+        for (int i = 0; i < 8; i++) { session.lyric = "歌词 " + i; session.changed.run(); }
+        ((View)main("play")).performClick(); // Pause.
+        assertEquals(1, pool.getResourcePlaybacks(R.raw.needle).size());
+
+        TurntableView.NeedleListener arm = (TurntableView.NeedleListener)field(main("turntable"), "needleListener");
+        arm.onNeedlePlay();
+        assertEquals(2, pool.getResourcePlaybacks(R.raw.needle).size());
+        assertEquals("qq_music", bridge.getSelectedProviderId());
+        new ThemeStore(activity).needleSound(false);
+        arm.onNeedlePlay();
+        assertEquals(2, pool.getResourcePlaybacks(R.raw.needle).size());
+        new ThemeStore(activity).needleSound(true);
+        session.actions = PlaybackState.ACTION_PAUSE;
+        session.changed.run();
+        arm.onNeedlePlay(); // The official app now rejects play.
+        assertEquals(2, pool.getResourcePlaybacks(R.raw.needle).size());
+    }
+
+    @Test public void neteaseOfficialSongChangeKeepsOnlyCurrentTimedLyricsOnScreen() throws Exception {
+        Field cacheField=NeteaseLyrics.class.getDeclaredField("cache");
+        cacheField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        android.util.LruCache<String,String> cache=(android.util.LruCache<String,String>)cacheField.get(null);
+        cache.put("710101","[00:01]上首第一句");
+        cache.put("710102","[00:00]本首第一句\n[00:02]本首第二句");
+        try {
+            session.pkg="com.netease.cloudmusic";
+            session.songId="710101";
+            call("selectExternalSource",new Class<?>[]{String.class},"netease_music");
+            call("showLyrics");
+            Dialog previous=(Dialog)main("lyricsDialog");
+            session.songId="710102";
+            session.songTitle="下一首";
+            session.changed.run();
+            Dialog active=(Dialog)main("lyricsDialog");
+            assertNotSame(previous,active);
+            assertFalse(previous.isShowing());
+            View body=active.getWindow().getDecorView();
+            TextView lines=null;
+            for (int n=0;n<100 && lines==null;n++) {
+                Shadows.shadowOf(Looper.getMainLooper()).idleFor(20,TimeUnit.MILLISECONDS);
+                lines=(TextView)findText(body,"本首第一句\n本首第二句");
+                if (lines==null) Thread.sleep(10);
+            }
+            assertNotNull(lines);
+            assertNull(findText(body,"上首第一句"));
+            assertNotNull(findText(body,"下一首 · 歌词"));
+            assertTrue(lines.getText() instanceof android.text.Spannable);
+            layout(body,412,680);
+            Shadows.shadowOf(Looper.getMainLooper()).idleFor(300,TimeUnit.MILLISECONDS);
+            android.text.Spanned text=(android.text.Spanned)lines.getText();
+            assertEquals(1,text.getSpans(6,11,android.text.style.StyleSpan.class).length);
+            Runnable tick=(Runnable)main("lyricsTick");
+            Handler handler=(Handler)main("handler");
+            assertTrue(handler.hasCallbacks(tick));
+            controller.pause();
+            assertFalse(handler.hasCallbacks(tick));
+            assertTrue(active.isShowing());
+            controller.resume();
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            assertTrue(handler.hasCallbacks(tick));
+            active.dismiss();
+            assertFalse(handler.hasCallbacks(tick));
+        } finally {
+            cache.remove("710101"); cache.remove("710102");
+        }
+    }
+
+    @Test public void latePlainLyricsNeverScheduleTicksOrReplaceAnotherOpenPage() throws Exception {
+        Field cacheField=NeteaseLyrics.class.getDeclaredField("cache");
+        cacheField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        android.util.LruCache<String,String> cache=(android.util.LruCache<String,String>)cacheField.get(null);
+        cache.put("710103","纯音乐");
+        try {
+            session.pkg="com.netease.cloudmusic";
+            session.songId="710103";
+            call("selectExternalSource",new Class<?>[]{String.class},"netease_music");
+            call("showLyrics");
+            Dialog lyrics=(Dialog)main("lyricsDialog");
+            controller.pause();
+            View body=lyrics.getWindow().getDecorView();
+            for (int n=0;n<100 && findText(body,"纯音乐")==null;n++) {
+                Shadows.shadowOf(Looper.getMainLooper()).idle();
+                Thread.sleep(10);
+            }
+            assertNotNull(findText(body,"纯音乐"));
+            assertNull(main("lyricsTick"));
+            controller.resume();
+            call("showMusicSources");
+            Dialog sources=(Dialog)main("sourcesDialog");
+            session.songId="710104";
+            session.changed.run();
+            assertTrue(sources.isShowing());
+            assertFalse(lyrics.isShowing());
+            assertNull(main("lyricsTick"));
+        } finally { cache.remove("710103"); }
+    }
+
     @Test public void lyricNotificationsWithCopiedCoverDoNotLiftNeedleOrReplaceRecord()throws Exception{
         chooseQqThroughPage();drain();
         TurntableView view=(TurntableView)main("turntable");

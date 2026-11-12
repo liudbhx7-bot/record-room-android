@@ -274,7 +274,7 @@ public final class NeteaseProvider implements MusicProvider {
     }
     @Override public synchronized void logout()throws ProviderException{synchronized(session){session.clear();transientCookies="";pendingQr=null;cookieGeneration=session.generation();}}
 
-    private static Track track(JSONObject song)throws ProviderException{
+    static Track track(JSONObject song)throws ProviderException{
         if(song==null)throw invalid("网易云曲目资料无效");String sid=id(value(song,"id"));JSONObject album=song.optJSONObject("al");if(album==null)album=object(song,"album");
         JSONArray artists=song.optJSONArray("ar");if(artists==null)artists=array(song,"artists");String names=artistNames(artists);String artistId=value(artists.optJSONObject(0),"id");
         JSONObject albumPerformer=object(album,"artist");String albumArtist=value(albumPerformer,"name");if(albumArtist.isEmpty())albumArtist=names;

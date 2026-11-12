@@ -411,7 +411,7 @@ public final class TurntableView extends View {
             cx = getWidth() * .452f; cy = getHeight() * .59f;
             pivotX = cx + radius * 1.075f; pivotY = cy - radius * .88f;
         }
-        cabinet.prepare(getWidth(),getHeight(),cy,radius,getResources().getDisplayMetrics().density);
+        cabinet.prepare(getWidth(),getHeight(),cx,cy,radius,RECORD_CONTACT_SCALE,getResources().getDisplayMetrics().density);
         resin.prepare(cx, cy, radius, recordTintEnabled ? recordTint : DiscMaterials.color(disc), disc == 0, recordTintEnabled);
         boolean darkArm = disc != 0;
         armShader = new LinearGradient(-radius * .018f, 0, radius * .022f, 0,

@@ -1,19 +1,58 @@
 package com.recordroom.vinyl;
 
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
 import android.media.AudioAttributes;
 import android.media.SoundPool;
+import android.os.SystemClock;
 
 final class NeedleSound {
+    private static final long MAX_START_DELAY_MS = 300;
     private SoundPool pool;
-    private int sound;
+    private final int sound;
     private boolean ready;
-    NeedleSound(Context c){
-        pool=new SoundPool.Builder().setMaxStreams(1).setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build();
-        pool.setOnLoadCompleteListener((p,id,status)->ready=status==0);
-        try(AssetFileDescriptor afd=c.getAssets().openFd("sfx/needle.wav")){sound=pool.load(afd,1);}catch(Exception ignored){}
+    private float pendingGain;
+    private long expiresAt;
+
+    NeedleSound(Context context) {
+        AudioAttributes attributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+        pool = new SoundPool.Builder().setMaxStreams(1).setAudioAttributes(attributes).build();
+        pool.setOnLoadCompleteListener(this::loaded);
+        sound = pool.load(context, R.raw.needle, 1);
     }
-    void play(float volume){if(pool!=null&&ready)pool.play(sound,Math.min(.24f,volume*.24f),Math.min(.24f,volume*.24f),1,0,1);}
-    void close(){if(pool!=null)pool.release();pool=null;ready=false;}
+
+    private void loaded(SoundPool source, int id, int status) {
+        if (source != pool || id != sound) return;
+        ready = status == 0;
+        if (ready && pendingGain > 0 && SystemClock.uptimeMillis() <= expiresAt) {
+            play(pendingGain);
+        }
+        cancelPending();
+    }
+
+    void play(float volume) {
+        float gain = Math.min(1f, volume);
+        cancelPending();
+        if (pool == null || !(gain > 0)) return;
+        if (ready) {
+            pool.play(sound, gain, gain, 1, 0, 1f);
+        } else {
+            pendingGain = gain;
+            expiresAt = SystemClock.uptimeMillis() + MAX_START_DELAY_MS;
+        }
+    }
+
+    void cancelPending() {
+        pendingGain = 0;
+    }
+
+    void close() {
+        cancelPending();
+        if (pool == null) return;
+        pool.setOnLoadCompleteListener(null);
+        pool.release();
+        pool = null;
+    }
 }

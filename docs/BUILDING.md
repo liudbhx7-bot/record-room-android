@@ -76,7 +76,7 @@ python3 tools/build.py \
   --platform-jar "$ANDROID_SDK_ROOT/platforms/android-36/android.jar"
 ```
 
-当前版本产物为 `dist/vinyl-baseline-v0.8.0.apk`（版本代码 21），摘要位于 `dist/SHA256SUMS.txt`。版本和文件名从 AndroidManifest.xml 读取。构建会核对依赖摘要、合并真实 SDK 资源与声明、清除 Apple 授权模块的敏感调试日志，并验证 APK 签名及 16 KB 对齐。
+当前版本产物为 `dist/vinyl-baseline-v0.8.1.apk`（版本代码 22），摘要位于 `dist/SHA256SUMS.txt`。版本和文件名从 AndroidManifest.xml 读取。构建会核对依赖摘要、合并真实 SDK 资源与声明、清除 Apple 授权模块的敏感调试日志，并验证 APK 签名及 16 KB 对齐。
 
 自签构建与 Release APK 不会有相同 SHA-256。公开导出还省略了已经停用的汽水直连网页资源，清单见 [excluded-legacy-assets.json](excluded-legacy-assets.json)；官方 App 媒体联动不使用这些资源。原 0.7.7 Release APK 保留其已验证的原始字节与签名。
 

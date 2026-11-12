@@ -83,9 +83,11 @@ public class MusicSourcesThemeTest {
     @Test public void everyActionAndPermissionErrorStateSurvivesThemeUpdates(){
         for(String label:new String[]{"关闭音乐来源","切回资料库","网易云音乐","QQ 音乐 · 账号与曲库","Apple Music · 账号与曲库","开启播放联动"}){View control=find(page,label);assertNotNull(label,control);control.performClick();}
         for(ExternalMusicBridge.Provider provider:ExternalMusicBridge.providers()){
-            ViewGroup panel=(ViewGroup)find(page,provider.name).getParent();find(panel,provider.id.equals("qishui_music")?"正在使用":"联动播放").performClick();find(panel,"打开官方 App").performClick();
+            String label=provider.name+" · "+(provider.id.equals("qishui_music")?"正在使用":"联动播放");
+            View select=find(page,label);assertNotNull(label,select);select.performClick();
+            ViewGroup controls=(ViewGroup)select.getParent();find(controls,"打开官方 App").performClick();
         }
-        assertEquals(Arrays.asList("back","local","netease","direct:qq","direct:applemusic","authorize","select:qq_music","open:qq_music","select:qishui_music","open:qishui_music","select:apple_music","open:apple_music"),actions);
+        assertEquals(Arrays.asList("back","local","netease","direct:qq","direct:applemusic","authorize","select:qq_music","open:qq_music","select:qishui_music","open:qishui_music","select:apple_music","open:apple_music","select:netease_music","open:netease_music"),actions);
         assertNotNull(find(page,"先开启播放联动权限"));access.granted=true;access.connected=false;bridge.refresh();assertNotNull(find(page,"已获授权，等待系统连接媒体会话服务"));
         DesignSystem.setAlbumTheme(activity,"gray-fixture",0xff444444,0xff999999);access.connected=true;access.fail=true;bridge.refresh();assertNotNull(find(page,bridge.getState().statusMessage));assertFalse(bridge.getState().connected);
         access.installed=false;bridge.refresh();ViewGroup panel=(ViewGroup)find(page,"汽水音乐").getParent();assertFalse(find(panel,"正在使用").isEnabled());assertNotNull(find(panel,"未检测到汽水音乐，请先安装官方 App"));

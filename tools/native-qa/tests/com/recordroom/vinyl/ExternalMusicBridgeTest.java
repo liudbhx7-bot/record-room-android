@@ -52,7 +52,8 @@ public class ExternalMusicBridgeTest {
     }
 
     @Test public void registryIsClosedAndInvalidSelectionCannotReplaceSource() {
-        assertEquals(3, ExternalMusicBridge.providers().size());
+        assertEquals(4, ExternalMusicBridge.providers().size());
+        assertEquals("com.netease.cloudmusic", ExternalMusicBridge.providerForId("netease_music").packageName);
         assertEquals(QQ, ExternalMusicBridge.providerForId("qq_music").packageName);
         assertEquals(SODA, ExternalMusicBridge.providerForId("qishui_music").packageName);
         assertEquals(APPLE, ExternalMusicBridge.providerForId("apple_music").packageName);

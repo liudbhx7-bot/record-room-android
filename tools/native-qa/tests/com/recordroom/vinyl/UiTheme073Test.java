@@ -86,6 +86,9 @@ public class UiTheme073Test {
         assertNull(described(main,"搜索在线曲库"));
         View trigger=described(main,"打开播放工具");
         assertNotNull(trigger);
+        assertTrue(trigger instanceof PlayerControls.Icon);
+        assertFalse((Boolean)field(trigger,"glass"));
+        assertTrue(trigger.getMinimumWidth() >= DesignSystem.dp(activity,48));
         trigger.performClick();
         Dialog drawer=(Dialog)field(activity,"toolDrawer");
         assertTrue(drawer.isShowing());

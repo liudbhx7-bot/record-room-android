@@ -8,6 +8,6 @@ Robolectric 的 [ShadowPlayerBase](https://github.com/robolectric/robolectric/bl
 
 `run_render.py` 将兼容源和 robolectric.properties 复制到临时 QA 类路径，并在报告中记录其 SHA-256。其它 SDK 不启用这个 shim。升级 Robolectric 后应先删除兼容项重跑验证，确认上游问题修复后再移除它。
 
-`AudioServiceCompatibilityTest` 确认原 NeedleSound 构造/释放仍执行，以及 Robolectric 原装 ShadowSoundPool 的加载、成功回调、播放与音量记录仍正常。MainRenderTest 和 InteractionTimingTest 保持原有音效路径、页面构造和动画断言。这里验证的是 Android 测试环境行为，不构成真机音频输出验收。
+`AudioServiceCompatibilityTest` 读取安装包里的落针采样，检查响度与余量，并用原装 ShadowSoundPool 验证实际 NeedleSound 的加载、音量、取消及释放行为。MainRenderTest 和 InteractionTimingTest 保持原有音效路径、页面构造和动画断言。这里验证的是 Android 测试环境行为，不构成真机音频输出验收。
 
 补充：Media3 Spatializer 也经 AudioManager.getService 触发同一代理问题，Api34AudioManagerShadow 继承上游 ShadowAudioManager，仅将 getService 返回相同 API34 IAudioService.Default。真实 Media3 解码、seek/pause、退出保留内置播放的 21 项回归已通过。此 shim 不进入 APK，不改变实际蓝牙或空间音频行为。

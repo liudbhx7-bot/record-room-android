@@ -4,7 +4,7 @@
 
 ## 应该下载哪个文件？
 
-下载 [Record-Room-0.8.0-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.0/Record-Room-0.8.0-Android.apk)。Release 中的 `Source code` 是源码，不能直接安装到手机。
+下载 [Record-Room-0.8.1-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.1/Record-Room-0.8.1-Android.apk)。Release 中的 `Source code` 是源码，不能直接安装到手机。
 
 当前发布的是 Android 预览版，最低 Android 8.0（API 26），面向 ARM / ARM64 设备。没有发布 Windows、macOS 或 iOS 安装包。
 
@@ -16,7 +16,7 @@
 
 ## 怎样启用浮光 01？
 
-安装或覆盖更新到 0.8.0 后，播放页会直接显示浮光 01，无需购买或单独启用。设置页底部和 Android 的应用信息均可查看版本，本次版本代码为 `21`。
+安装或覆盖更新到 0.8.1 后，播放页会直接显示浮光 01，无需购买或单独启用。设置页底部和 Android 的应用信息均可查看版本，本次版本代码为 `22`。
 
 ## 为什么有时进度条不能拖动？
 

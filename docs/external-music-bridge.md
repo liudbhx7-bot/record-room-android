@@ -6,11 +6,12 @@
 
 | ID | 名称 | 唯一允许包名 | 核对来源 |
 |---|---|---|---|
+| `netease_music` | 网易云音乐 | `com.netease.cloudmusic` | [应用包可见性声明](../app/src/main/AndroidManifest.xml) |
 | `qq_music` | QQ音乐 | `com.tencent.qqmusic` | [腾讯应用宝官方分发页](https://sj.qq.com/appdetail/com.tencent.qqmusic) |
 | `qishui_music` | 汽水音乐 | `com.luna.music` | [腾讯应用宝官方分发页](https://sj.qq.com/appdetail/com.luna.music)、[小米应用商店开发者与包名](https://r.app.xiaomi.com/details?id=com.luna.music) |
 | `apple_music` | Apple Music | `com.apple.android.music` | [Apple 发布的 Google Play 页面](https://play.google.com/store/apps/details?id=com.apple.android.music) |
 
-核对日期：2026-11-09。精确匹配包名，不接受前缀、域名、任意 URL、电视版或其他变体。包名登记只表示限定目标 App，并不证明该版本在某台设备上必然提供所有媒体能力。
+精确匹配包名，不接受前缀、域名、任意 URL、电视版或其他变体。包名登记只表示限定目标 App，并不证明该版本在某台设备上必然提供所有媒体能力。
 
 ## 系统依据
 

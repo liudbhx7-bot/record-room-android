@@ -6,15 +6,15 @@
 
 Android 原生黑胶播放器 · 封面配色 · 竖立专辑架 · 音乐人主页
 
-**0.8.0 预览版** · Android 8.0+ · ARM / ARM64
+**0.8.1 预览版** · Android 8.0+ · ARM / ARM64
 
-[**下载 Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.0/Record-Room-0.8.0-Android.apk) · [版本说明](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.0) · [使用指南](docs/USER_GUIDE.md) · [常见问题](docs/FAQ.md)
+[**下载 Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.1/Record-Room-0.8.1-Android.apk) · [版本说明](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.1) · [使用指南](docs/USER_GUIDE.md) · [常见问题](docs/FAQ.md)
 
 </div>
 
 Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音乐播放器。导入自己的音频，搜索歌曲与音乐人，翻开一张专辑，或者连接正在播放的官方音乐 App，让音乐以唱片的方式呈现。
 
-「浮光 01」是默认唱机，直接随应用升级提供，无需购买。当前专辑的封套插在机身后方，盘心呈现同一张封面，左下盘缘透出随封面变化的光。盘面、底灯、背景和页面随当前封面配色；立体封套可以滑动选片、打开并抽出唱片。点曲名旁的「工具」即可展开操作抽屉；搜索首页从最近听过的专辑封套开始。
+「浮光 01」是默认唱机，直接随应用升级提供，无需购买。当前专辑的封套插在机身后方，盘心呈现同一张封面，左下盘缘透出随封面变化的光。盘面、底灯、背景和页面随当前封面配色；立体封套可以滑动选片、打开并抽出唱片。点曲名旁的「⋯」即可展开操作抽屉；搜索首页从最近听过的专辑封套开始。
 
 > **当前状态：公开预览版。** QQ 私人账号的 VIP 全曲播放尚未确认修复；Apple Music 需要自行配置开发者令牌；OPPO Find N6 / ColorOS 真机及长时间后台表现仍待验证。完整范围见[验证记录](docs/VERIFICATION.md)。
 
@@ -22,18 +22,18 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 | 内容 | 入口 |
 | --- | --- |
-| Android 安装包 | [Record-Room-0.8.0-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.0/Record-Room-0.8.0-Android.apk) |
-| 版本说明与校验文件 | [v0.8.0 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.0) |
-| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.0) |
+| Android 安装包 | [Record-Room-0.8.1-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.1/Record-Room-0.8.1-Android.apk) |
+| 版本说明与校验文件 | [v0.8.1 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.1) |
+| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.1) |
 | 问题反馈 | [提交问题](https://github.com/liudbhx7-bot/record-room-android/issues/new/choose) |
 
-下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.8.0`，版本代码为 `21`。
+下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.8.1`，版本代码为 `22`。
 
 相同签名的旧版本可覆盖安装。自行编译的安装包使用自己的签名，通常不能直接覆盖本项目发布的 APK，详见[安装与更新](docs/USER_GUIDE.md#安装与更新)。当前没有应用内自动更新功能，请从 Release 下载更新。
 
 ## 界面预览
 
-下图依次为 0.8.0 播放工具、搜索首页和桌面小组件配置页，取自 Android 15 模拟器。
+播放工具截图取自 0.8.1。搜索首页和桌面小组件截图取自 0.8.0。三张均为 Android 15 模拟器实拍。
 
 <table>
   <tr><th>播放工具</th><th>搜索音乐</th><th>桌面小组件</th></tr>
@@ -61,7 +61,7 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 ![较宽显示尺寸的唱片机](docs/screenshots/wide-player.png)
 
-此图为 0.8.0 APK 在 Android 模拟器较宽显示尺寸下的播放页。
+此图为 0.8.1 APK 在 Android 模拟器较宽显示尺寸下的播放页。
 
 </details>
 
@@ -86,7 +86,7 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 | 来源 | 当前接入方式 | 支持范围 |
 | --- | --- | --- |
 | 本地音乐 | 从系统文件选择器导入，在唱片机内播放 | 支持 MP3、AAC、FLAC、PCM WAV、Ogg Opus、ALAC、AIFF、APE 和 WavPack，详见[样本及输出验证](docs/VERIFICATION.md)。 |
-| 网易云音乐 | 账号、搜索、歌单、专辑和音乐人目录 | 已实现；公开音乐人查询、分页与头像已联网核验。私人账号使用仍需对应授权。 |
+| 网易云音乐 | 账号、搜索、歌单、专辑、音乐人、在线歌词与官方 App 联动 | 公开目录和有时间戳的歌词已联网核验。私人账号使用需对应授权。 |
 | QQ 音乐 | 账号、搜索、歌单、专辑和音乐人目录；也可选官方 App 联动 | 已实现目录接入；公开搜索已核验。私人账号歌单及 VIP 全曲播放仍待真实账号验证。 |
 | Apple Music | 官方 MusicKit 授权与播放 SDK、目录与资料库；也可选官方 App 联动 | 入口与代码已接入。没有预置开发者令牌，需自行配置；真实授权与 DRM 全曲播放尚未验收。 |
 | 汽水音乐 | **仅官方 App 联动** | 需安装官方 App、开启通知使用权，并先在官方 App 播放。不提供汽水账号直连或在线曲库搜索。 |
@@ -97,18 +97,17 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 1. 从本页 Release 下载并安装 APK。
 2. 打开 **设置 → 导入本地音乐**，先选一首设备上的音频；也可以在 **音乐账户与联动** 中选择在线账号或官方 App 联动。
-3. 点播放，或拖动唱针落到唱片上。点曲名旁的「工具 → 搜索」查找音乐，点音乐人卡片进入主页，翻到第三章浏览专辑。
+3. 点播放，或拖动唱针落到唱片上。点曲名旁的「⋯ → 搜索」查找音乐，点音乐人卡片进入主页，翻到第三章浏览专辑。
 
 工具自动隐藏后，点一下唱机背景即可重新显示。联动播放时，会员、曲库、队列与音频输出仍由官方 App 管理。
 
 [阅读完整使用指南 →](docs/USER_GUIDE.md)
 
-## 0.8.0 更新
+## 0.8.1 更新
 
-- 播放工具移到曲名旁。打开抽屉可进入资料库、搜索、队列、歌词、外观、设置和音质详情。
-- 搜索首页陈列最近专辑封套。音乐人、专辑和单曲各有结果入口，歌曲保留封面及平台返回的会员标记。
-- 小组件配置改成单件大预览。可以切换四款造型，直接看到封面、背景与按钮的配色。
-- 导入 CUE 时同时选中它引用的音频，即可按曲目播放整轨专辑。顺序播放会预排下一首本地曲目。音质详情列出音源、Android 音频流和当前设备；Android 14 及以上支持为兼容 USB DAC 请求匹配采样率。
+- 曲名右侧的「⋯」打开播放工具。后槽里的专辑封面按原图比例完整显示，横图和竖图都能保留四边。
+- 网易云曲库可按歌曲编号读取歌词。网易云官方 App 联动也支持歌词，有时间信息时会随播放进度高亮。
+- 重新调校落针声的清晰度，补齐联动播放和手动落针时的触发。可在「设置 → 聆听体验」关闭。
 
 [完整更新记录](CHANGELOG.md) · [本版验证范围与已知问题](docs/VERIFICATION.md)
 

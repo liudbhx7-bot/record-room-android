@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 final class TrackLyrics {
     private static final int LIMIT = 256 * 1024;
     private static final Pattern TIME = Pattern.compile("\\[\\d{1,3}:\\d{2}(?:[.:]\\d{1,3})?\\]");
-    private static final Pattern TAG = Pattern.compile("(?im)^\\s*\\[(?:ar|al|ti|by|offset|length|re|ve):[^\\]\r\n]*\\]\\s*$");
+    private static final Pattern TAG = Pattern.compile("(?im)^[ \\t]*\\[(?:ar|al|ti|by|offset|length|re|ve):[^\\]\r\n]*\\][ \\t]*$");
 
     private TrackLyrics() {}
 
@@ -98,8 +98,8 @@ final class TrackLyrics {
         }
         boolean utf16 = raw.length>=2 && ((raw[0]==-1 && raw[1]==-2)||(raw[0]==-2 && raw[1]==-1));
         Charset encoding = utf16 ? StandardCharsets.UTF_16 : StandardCharsets.UTF_8;
-        String value = display(encoding.newDecoder().decode(ByteBuffer.wrap(raw)).toString());
-        if (value.isEmpty()) throw new IOException("No lyric text");
+        String value = encoding.newDecoder().decode(ByteBuffer.wrap(raw)).toString();
+        if (display(value).isEmpty()) throw new IOException("No lyric text");
         AtomicFile file = file(context,id);
         FileOutputStream out = file.startWrite();
         try {

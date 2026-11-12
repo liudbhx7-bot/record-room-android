@@ -7,7 +7,6 @@ import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 
@@ -19,7 +18,8 @@ final class FuguangDeck {
     private final Path top = new Path(), seam = new Path();
     private final RectF pocket = new RectF(), sleeve = new RectF(), inward = new RectF();
     private final Matrix noiseScale = new Matrix();
-    private final Rect sourceWindow = new Rect();
+    private final RectF artworkBounds = new RectF();
+    private static final float SLEEVE_SHEAR = -.145f;
     private int sourceWidth, sourceHeight;
     private static Bitmap grain;
     private static synchronized Bitmap grainTile() {
@@ -40,7 +40,7 @@ final class FuguangDeck {
     private float u, left, bottom, tilt;
     private boolean showSleeve;
 
-    void prepare(int width, int height, float cy, float radius, float density) {
+    void prepare(int width, int height, float cx, float cy, float radius, float maxDiscScale, float density) {
         // u is a pixel in the 842-wide concept, scaled to the available machine, not to the screen diagonal.
         float w = width;
         u = Math.min(width / 842f, radius / 344f);
@@ -61,29 +61,21 @@ final class FuguangDeck {
         noiseScale.setScale(Math.max(.72f,Math.min(1.45f,density*.72f)),Math.max(.72f,Math.min(1.45f,density*.72f)));
         grainShader.setLocalMatrix(noiseScale);
 
-        // Reserve the upper controls' inset before sizing the sleeve.
-        float compactInset = Math.max(8*density, Math.min(10*density, 20*u));
-        float largeInset = Math.max(14*density, Math.min(19*density, 37*u));
-        float clearTop = Math.min(38*u, 17*density) + compactInset + largeInset*1.28f + 10*density;
-        bottom = Math.max(0, rear-18*u);
-        // On a shorter machine the platter only reaches this height at its centre.
-        // Nest the jacket into the empty upper-left shoulder; draw order naturally
-        // tucks its lower-right corner *behind* the record, away from the stylus.
-        float desiredRise=Math.min(.42f*w,152*density)*.58f;
-        boolean shallow=bottom-clearTop < desiredRise;
-        if(shallow)bottom+=Math.min(radius*.29f, clearTop+desiredRise-bottom);
-        float available = bottom - clearTop;
-        if (available<37*density && width>=144*density) {
-            // Use the upper-left shoulder when vertical space is scarce.
-            clearTop=7*density; available=bottom-clearTop;
-        }
-        showSleeve = available >= 16*density && width >= 112*density && height >= 98*density;
+        tilt = -10.5f;
+        left = .054f * w;
+        double angle = Math.toRadians(-tilt);
+        float slope = (float)Math.tan(angle);
+        // The pocket is parallel to the sleeve base. Keep it above the tangent
+        // of the largest playing disc, including its rim and the pocket lip.
+        bottom = cy + slope * (cx - left) - radius * maxDiscScale / (float)Math.cos(angle) - 9*u;
+        float topMargin = Math.max(7*density, 5*u);
+        float tiltedHeight = (float)(Math.cos(angle) + Math.sin(angle) * (1 - SLEEVE_SHEAR));
+        float sw = Math.min(w*.428f, (bottom - topMargin - 3*u) / tiltedHeight);
+        showSleeve = sw > 8*density && width >= 80*density && height >= 64*density;
         if (!showSleeve) return;
-        float sw = Math.min(w*.428f,available*(shallow?1.32f:1.52f));
-        float sh = sw*.575f;
-        tilt = -10.5f; left = .054f*w;
-        sleeve.set(0,-sh,sw,1.5f*u);
-        inward.set(sleeve.left+1.6f*u,sleeve.top+2.6f*u,sleeve.right-1.6f*u,sleeve.bottom);
+        sleeve.set(0,-sw,sw,0);
+        inward.set(sleeve);
+        inward.inset(2.4f*u, 2.4f*u);
         pocket.set(-sw*.071f,-sw*.065f,sw*1.102f,sw*.020f);
         socket = new LinearGradient(0,pocket.top,0,pocket.bottom,new int[]{0xee060607,0xff0c0b0c,0xff141314},new float[]{0,.55f,1},Shader.TileMode.CLAMP);
         jacketShading = new LinearGradient(0,sleeve.top,0,sleeve.bottom,new int[]{0x14ffffff,0x00ffffff,0x08000000,0x46000000},new float[]{0,.14f,.79f,1},Shader.TileMode.CLAMP);
@@ -112,22 +104,20 @@ final class FuguangDeck {
         p.setColor(0xffffffff);p.setShader(socket);c.drawRoundRect(pocket,sr,sr,p);p.setShader(null);
         int shadow=c.save();c.translate(4*u,3*u);p.setColor(0x32000000);c.drawRoundRect(sleeve,2*u,2*u,p);c.restoreToCount(shadow);
         // A small shear straightens the vertical edges of the inserted jacket.
-        c.skew(-.145f,0);
+        c.skew(SLEEVE_SHEAR,0);
         p.setColor(0xff564c44);c.drawRoundRect(sleeve.left-1.5f*u,sleeve.top-3*u,sleeve.right+1.6f*u,sleeve.bottom,2*u,2*u,p);
         p.setColor(0xffb6a997);c.drawRoundRect(sleeve.left-1.2f*u,sleeve.top-1.7f*u,sleeve.right+u,sleeve.bottom,1.8f*u,1.8f*u,p);
         p.setColor(0xffcabbaa);c.drawRoundRect(sleeve,1.7f*u,1.7f*u,p);
         if(cover!=null && !cover.isRecycled()) {
-            // Only the portion above the slot is visible. Crop the sheet at its native
-            // aspect so faces and round artwork remain in proportion instead of flattening.
-            int bw=cover.getWidth(),bh=cover.getHeight();
-            if (sourceWidth!=bw || sourceHeight!=bh) {
-                float scale=Math.max(inward.width()/bw,inward.height()/bh);
-                int showW=Math.min(bw,Math.max(1,Math.round(inward.width()/scale)));
-                int showH=Math.min(bh,Math.max(1,Math.round(inward.height()/scale)));
-                int x=(bw-showW)/2,y=Math.round((bh-showH)*.38f);
-                sourceWindow.set(x,y,x+showW,y+showH);sourceWidth=bw;sourceHeight=bh;
+            int bw = cover.getWidth(), bh = cover.getHeight();
+            if (sourceWidth != bw || sourceHeight != bh) {
+                float scale = Math.min(inward.width() / bw, inward.height() / bh);
+                float x = inward.centerX(), y = inward.centerY();
+                artworkBounds.set(x - bw*scale/2, y - bh*scale/2, x + bw*scale/2, y + bh*scale/2);
+                sourceWidth = bw;
+                sourceHeight = bh;
             }
-            c.drawBitmap(cover,sourceWindow,inward,art);
+            c.drawBitmap(cover, null, artworkBounds, art);
         } else {
             // A pressed charcoal blank jacket when no cover exists, never a fake album.
             p.setColor(0xff43403e);c.drawRect(inward,p);
