@@ -210,6 +210,7 @@ public final class QQProvider implements MusicProvider {
         int total=object(data,"meta").optInt("sum",body.optInt("sum",body.optInt("totalnum",-1)));int received=offset+items.size();boolean more=total>=0?received<total:items.size()==limit;
         if(items.size()>limit||items.isEmpty()&&more)throw incomplete();return new Page<>(items,total,more?offset+limit:received,more);
     }
+    @Override public boolean supportsAlbumSearch(){return true;}
     @Override public Page<Album> searchAlbums(String query,int offset,int limit)throws ProviderException{
         JSONObject data=searchData(query,offset,limit,2),body=requiredObject(data,"body");JSONArray rows=body.optJSONArray("item_album");if(rows==null)rows=object(body,"album").optJSONArray("list");if(rows==null)throw QQHttp.invalid();
         List<Album> albums=new ArrayList<>();for(int i=0;i<rows.length();i++)albums.add(albumSummary(rows.optJSONObject(i),""));return searchPage(data,body,albums,offset,limit);

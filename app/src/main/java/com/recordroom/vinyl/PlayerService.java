@@ -64,6 +64,16 @@ public class PlayerService extends Service {
     private final LocalBinder binder = new LocalBinder();
     private final ExecutorService artworkIO = Executors.newSingleThreadExecutor(r -> new Thread(r, "vinyl-session-artwork"));
     private ExoPlayer player;
+    private PlaybackAudioPath audioPath;
+    String audioQuality() {
+        if (applePlayer!=null) return "音源与输出由 Apple MusicKit 管理。SDK 未报告当前曲目的实际输出规格。";
+        return audioPath==null?"播放歌曲后可查看音源与输出设备。":audioPath.report(player==null?null:player.getAudioFormat());
+    }
+    boolean usbFollowsSource(){return getSharedPreferences(PREFS,MODE_PRIVATE).getBoolean("usb_follow_rate",true);}
+    void setUsbFollowsSource(boolean enabled){
+        getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean("usb_follow_rate",enabled).apply();
+        if(player!=null){positionMs=getPositionMs();prepareCurrent();}
+    }
     private ApplePlaybackEngine applePlayer;
     private long appleEndEvent;
     private boolean appleWasPlaying;
@@ -218,6 +228,10 @@ public class PlayerService extends Service {
         }
         return positionMs;
     }
+    String currentEmbeddedLyrics() {
+        return player == null ? "" : TrackLyrics.embedded(player.getCurrentTracks());
+    }
+
     public long getDurationMs() {
         if (durationMs > 0) return durationMs;
         Track current = getCurrent();
@@ -452,13 +466,36 @@ public class PlayerService extends Service {
             if("asset".equals(scheme)) {
                 String path=uri.getPath();if(path==null||!path.startsWith("/demo/")||path.contains(".."))throw new IllegalArgumentException("Unsupported asset");
             } else if(!"content".equals(scheme)&&!"file".equals(scheme)&&!"https".equalsIgnoreCase(scheme)&&!"http".equalsIgnoreCase(scheme))throw new IllegalArgumentException("Unsupported audio URI");
-            ExoPlayer candidate=new ExoPlayer.Builder(this).setLooper(Looper.getMainLooper())
-                    .setMediaSourceFactory(new DefaultMediaSourceFactory(createDataSourceFactory(resource)))
+            PlaybackAudioPath path=new PlaybackAudioPath(this,usbFollowsSource(),() -> {
+                if (!destroyed && generation==token && player!=null && !ended) {
+                    positionMs=getPositionMs();
+                    prepareCurrent();
+                }
+            });
+            audioPath=path;
+            DataSource.Factory usual=createDataSourceFactory(resource);
+            DataSource.Factory inputs=resource==null?()->new LocalFormatDataSource(this,usual.createDataSource(),path::source):usual;
+            ExoPlayer candidate=new ExoPlayer.Builder(this,path.renderers(this)).setLooper(Looper.getMainLooper())
+                    .setMediaSourceFactory(new DefaultMediaSourceFactory(inputs))
                     .setAudioAttributes(new androidx.media3.common.AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),false)
                     .setHandleAudioBecomingNoisy(false).setWakeMode(C.WAKE_MODE_LOCAL).setUsePlatformDiagnostics(false).build();
             player=candidate;activeResource=resource;
             playerListener=new Player.Listener(){
                 private boolean current(){return !destroyed&&player==candidate&&token==generation;}
+                @Override public void onMediaItemTransition(MediaItem next,int reason) {
+                    if (!current() || reason != Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || next == null) return;
+                    Track upcoming = upcomingLocal();
+                    if (upcoming == null || !next.mediaId.equals(LibraryStore.identity(upcoming))) return;
+                    index++;
+                    path.selectSource(Uri.parse(upcoming.uri));
+                    positionMs = candidate.getCurrentPosition();
+                    long length = candidate.getDuration();
+                    durationMs = length == C.TIME_UNSET ? upcoming.durationMs : length;
+                    ended = false;
+                    error = "";
+                    if (desiredPlay) new LibraryStore(PlayerService.this).remember(upcoming);
+                    changed(true);
+                }
                 @Override public void onPlaybackStateChanged(int state){
                     if(!current())return;
                     if(state==Player.STATE_READY){
@@ -478,7 +515,9 @@ public class PlayerService extends Service {
                 @Override public void onPlayerError(PlaybackException failure){if(current())handlePlaybackError(failure);}
             };
             candidate.addListener(playerListener);
-            candidate.setMediaItem(new MediaItem.Builder().setMediaId(LibraryStore.identity(track)).setUri(uri).build(),positionMs);
+            path.selectSource(uri);
+            candidate.setMediaItem(LocalCueImport.mediaItem(track, uri),positionMs);
+            syncUpcomingLocal();
             candidate.prepare();changed(false);
         } catch(RuntimeException exception){fail("无法打开音频：请检查文件、网络或播放权限");}
     }
@@ -497,6 +536,9 @@ public class PlayerService extends Service {
         boolean expired=activeResource!=null&&activeResource.expiresAtMs>0&&activeResource.expiresAtMs<=System.currentTimeMillis();
         for(Throwable cause=failure;cause!=null;cause=cause.getCause())if(cause instanceof HttpDataSource.InvalidResponseCodeException){int code=((HttpDataSource.InvalidResponseCodeException)cause).responseCode;expired|=code==401||code==403||code==410;}
         if(OnlineMusic.isRemote(getCurrent())&&expired&&!urlRefreshUsed){positionMs=getPositionMs();urlRefreshUsed=true;prepareCurrent(true);return;}
+        if(!OnlineMusic.isRemote(getCurrent())){
+            fail("本地音频读取或解码失败，请检查文件完整性和访问权限");return;
+        }
         fail(expired?"播放地址失效，刷新后仍不可用，请重试":"播放失败：请检查网络、文件或歌曲播放权限");
     }
 
@@ -627,6 +669,7 @@ public class PlayerService extends Service {
     public void setPlayMode(int mode) {
         if (mode < MODE_ORDER || mode > MODE_SHUFFLE) return;
         playMode = mode;
+        syncUpcomingLocal();
         shuffleHistory.clear();
         persist();
         notifyListeners();
@@ -729,9 +772,41 @@ public class PlayerService extends Service {
             old.release();
         }
         playerListener=null;
+        if(audioPath!=null){audioPath.close();audioPath=null;}
+    }
+
+    /** Media3 can buffer the next local item on the current audio renderer. Provider URLs,
+     * shuffle and repeat keep their own resolution and completion paths. */
+    private Track upcomingLocal() {
+        if (playMode != MODE_ORDER || index < 0 || index+1 >= queue.size()) return null;
+        Track current = queue.get(index), next = queue.get(index+1);
+        return isQueueableLocal(current) && isQueueableLocal(next) ? next : null;
+    }
+    private static boolean isQueueableLocal(Track t) {
+        Uri uri = Uri.parse(t.uri);
+        String scheme = uri.getScheme();
+        if (OnlineMusic.isRemote(t)) return false;
+        if ("asset".equals(scheme)) return uri.getPath() != null && uri.getPath().startsWith("/demo/") && !uri.getPath().contains("..");
+        return "content".equals(scheme) || "file".equals(scheme);
+    }
+    private void syncUpcomingLocal() {
+        if (player == null || activeResource != null || player.getMediaItemCount() == 0) return;
+        // Only the current item and one successor are retained in the native timeline.
+        int current = player.getCurrentMediaItemIndex();
+        if (current > 0) player.removeMediaItems(0,current);
+        Track upcoming = upcomingLocal();
+        if (upcoming == null) {
+            if (player.getMediaItemCount() > 1) player.removeMediaItem(1);
+            return;
+        }
+        MediaItem next = LocalCueImport.mediaItem(upcoming,Uri.parse(upcoming.uri));
+        if (player.getMediaItemCount() == 1) player.addMediaItem(next);
+        else if (!next.equals(player.getMediaItemAt(1))) player.replaceMediaItem(1,next);
     }
 
     private void changed(boolean trackChanged) {
+        if (player != null && getCurrent() != null && player.getCurrentMediaItem() != null
+                && player.getCurrentMediaItem().mediaId.equals(LibraryStore.identity(getCurrent()))) syncUpcomingLocal();
         persist();
         updateSession();
         if (getCurrent() == null) {

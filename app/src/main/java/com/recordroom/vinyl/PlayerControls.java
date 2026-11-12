@@ -49,6 +49,9 @@ final class PlayerControls {
             case "shelf":
             case "albums": c.drawLine(3,3,3,21,p);c.drawLine(7,3,7,21,p);c.drawLine(11,3,11,21,p);
                 path.moveTo(15,3);path.lineTo(21,6);path.lineTo(21,18);path.lineTo(15,21);path.close();c.drawPath(path,p);break;
+            case "lyrics":
+                c.drawRoundRect(3,3,21,18,3,3,p);path.moveTo(7,18);path.lineTo(7,21);path.lineTo(11,18);c.drawPath(path,p);
+                c.drawLine(7,8,17,8,p);c.drawLine(7,12,14,12,p);break;
             case "queue": c.drawLine(3,4,21,4,p);c.drawLine(3,9,16,9,p);c.drawLine(3,14,11,14,p);c.drawLine(3,19,11,19,p);
                 path.moveTo(17,13);path.lineTo(21,16);path.lineTo(17,19);c.drawPath(path,p);break;
             case "back":path.moveTo(14,5);path.lineTo(7,12);path.lineTo(14,19);c.drawPath(path,p);break;

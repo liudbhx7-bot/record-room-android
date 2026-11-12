@@ -7,7 +7,7 @@ Works with a standard Android Studio SDK or the extracted official SDK archives.
 from pathlib import Path
 import argparse, hashlib, json, os, shutil, struct, subprocess, sys, zipfile
 import xml.etree.ElementTree as ET
-from android_dependencies import prepare
+from android_dependencies import prepare, elf_load_alignments
 from apple_auth_logging import sanitize_auth
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +67,15 @@ def main():
     for d in ['gen','classes','dex']:(build/d).mkdir(parents=True,exist_ok=True)
     main=ROOT/'app/src/main'
     dependencies=prepare(args.deps.resolve(),build,main/'AndroidManifest.xml')
+    codecs=ROOT/'work/audio-codecs/jni'
+    for abi in ('arm64-v8a', 'armeabi-v7a'):
+        library=codecs/abi/'librecord_formats.so'
+        if not library.is_file():
+            raise SystemExit('Build the local audio reader with tools/audio/build_codecs.py first. See docs/BUILDING.md.')
+        bits,segments=elf_load_alignments(library.read_bytes())
+        if min(segments)<16384:raise SystemExit('Local audio reader must be 16 KB aligned')
+        dependencies['native_libraries'].append({'path':str(library.relative_to(codecs)),'bits':bits,'load_alignments':segments})
+    dependencies['natives'].append(str(codecs))
     if dependencies['min_compile_sdk']>=36:
         with zipfile.ZipFile(android) as platform:
             if b'BAKLAVA' not in platform.read('android/os/Build$VERSION_CODES.class'):

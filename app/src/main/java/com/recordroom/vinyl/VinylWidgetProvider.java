@@ -65,6 +65,17 @@ public class VinylWidgetProvider extends AppWidgetProvider {
         PaletteEntry(Bitmap bitmap,AlbumPalette palette){this.bitmap=new WeakReference<>(bitmap);generation=bitmap.getGenerationId();this.palette=palette;}
     }
     private static Runnable pendingUpdate;
+    private static final java.util.Set<Runnable> previewListeners = new HashSet<>();
+    static void addPreviewListener(Runnable callback) { previewListeners.add(callback); }
+    static void removePreviewListener(Context context, Runnable callback) {
+        previewListeners.remove(callback);
+        stopLinkIfUnused(context);
+    }
+    private static void stopLinkIfUnused(Context c) {
+        if (previewListeners.isEmpty() && AppWidgetManager.getInstance(c).getAppWidgetIds(new ComponentName(c,VinylWidgetProvider.class)).length == 0)
+            WidgetLinkControl.stop();
+    }
+    @Override public void onDisabled(Context context) { stopLinkIfUnused(context); }
 
     static final class Options {
         final int style, colorMode, color;
@@ -106,6 +117,7 @@ public class VinylWidgetProvider extends AppWidgetProvider {
         MAIN.post(() -> {
             Track current = PlayerService.widgetTrack(app);
             boolean playing = PlayerService.widgetPlaying();
+            ExternalMusicBridge.State link = WidgetLinkControl.current(app);
             long serial = SERIAL.incrementAndGet();
             if (id != AppWidgetManager.INVALID_APPWIDGET_ID) GENERATIONS.put(id, serial);
             IO.execute(() -> {
@@ -113,7 +125,7 @@ public class VinylWidgetProvider extends AppWidgetProvider {
                 try {
                     success = store(app, id, options);
                     if (success && id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                        Snapshot snapshot = snapshot(app, current, playing, false);
+                        Snapshot snapshot = snapshot(app, current, playing, false, link);
                         success = push(app, AppWidgetManager.getInstance(app), id, snapshot, options, serial, true);
                     }
                 } catch (RuntimeException ignored) { success = false; }
@@ -155,6 +167,7 @@ public class VinylWidgetProvider extends AppWidgetProvider {
             if (pendingUpdate != null) MAIN.removeCallbacks(pendingUpdate);
             pendingUpdate = () -> {
                 pendingUpdate = null;
+                for (Runnable callback : new ArrayList<>(previewListeners)) callback.run();
                 AppWidgetManager manager = AppWidgetManager.getInstance(app);
                 int[] ids = manager.getAppWidgetIds(new ComponentName(app, VinylWidgetProvider.class));
                 if (ids.length > 0) requestUpdate(app, ids, false, null);
@@ -169,12 +182,13 @@ public class VinylWidgetProvider extends AppWidgetProvider {
         Runnable capture = () -> {
             Track current = PlayerService.widgetTrack(app);
             boolean playing = PlayerService.widgetPlaying();
+            ExternalMusicBridge.State link = WidgetLinkControl.current(app);
             long serial = SERIAL.incrementAndGet();
             for (int id : targets) GENERATIONS.put(id, serial);
             IO.execute(() -> {
                 try {
                     if (targets.length == 0) return;
-                    Snapshot snapshot = snapshot(app, current, playing, false);
+                    Snapshot snapshot = snapshot(app, current, playing, false, link);
                     AppWidgetManager manager = AppWidgetManager.getInstance(app);
                     for (int id : targets) {
                         if (!Long.valueOf(serial).equals(GENERATIONS.get(id))) continue;
@@ -225,6 +239,7 @@ public class VinylWidgetProvider extends AppWidgetProvider {
         views.setContentDescription(R.id.widget_previous, hasTrack ? "上一首" : "打开应用选择歌曲");
         views.setContentDescription(R.id.widget_play, hasTrack ? (snapshot.playing ? "暂停" : "播放") : "打开应用选择歌曲");
         views.setContentDescription(R.id.widget_next, hasTrack ? "下一首" : "打开应用选择歌曲");
+        if (snapshot.link != null) WidgetLinkControl.bind(context,views,snapshot.link,openIntent);
         Intent configure = new Intent(context, WidgetAppearanceActivity.class)
                 .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
                 .setData(android.net.Uri.parse("recordroom://widget/" + id))
@@ -243,10 +258,16 @@ public class VinylWidgetProvider extends AppWidgetProvider {
         final int color, discStyle, recordTint;
         final AlbumPalette artworkPalette;
         final float angle;
+        final ExternalMusicBridge.State link;
         final List<Bitmap> recentCovers;
         final int recentCount;
         Snapshot(Track current, boolean playing, Bitmap cover, Bitmap disc, int color, int discStyle, int recordTint, AlbumPalette artworkPalette, float angle,
                  List<Bitmap> recentCovers, int recentCount, String signature) {
+            this(current,playing,cover,disc,color,discStyle,recordTint,artworkPalette,angle,recentCovers,recentCount,signature,null);
+        }
+        Snapshot(Track current, boolean playing, Bitmap cover, Bitmap disc, int color, int discStyle, int recordTint, AlbumPalette artworkPalette, float angle,
+                 List<Bitmap> recentCovers, int recentCount, String signature, ExternalMusicBridge.State link) {
+            this.link = link;
             this.current = current; this.playing = playing; this.cover = cover; this.disc = disc; this.color = color; this.discStyle = discStyle; this.recordTint=recordTint;this.artworkPalette=artworkPalette;this.angle = angle;
             this.recentCovers = recentCovers; this.recentCount = recentCount; this.signature = signature;
             title = current == null ? "放上一张唱片" : current.title;
@@ -256,17 +277,34 @@ public class VinylWidgetProvider extends AppWidgetProvider {
 
     /** Must run on an IO thread: decoding never occurs in BroadcastReceiver or Activity callbacks. */
     static Snapshot snapshot(Context context, Track current, boolean playing, boolean preview) {
+        return snapshot(context,current,playing,preview,null);
+    }
+
+    static Snapshot snapshot(Context context, Track current, boolean playing, boolean preview, ExternalMusicBridge.State link) {
         loadImage(context,"design/paper-ivory-fiber-v1.png",true);
         ThemeStore themes = new ThemeStore(context);
         List<Track> recent = new LibraryStore(context).recent();
-        if (preview && current == null) {
+        if (link != null) {
+            String id = link.mediaId.isEmpty() ? link.title + "|" + link.artist + "|" + link.album : link.mediaId;
+            String title = link.title.isEmpty() ? link.selectedProvider.name : link.title;
+            String artist = link.artist.isEmpty() ? link.statusMessage : link.artist;
+            current = new Track("external|" + link.selectedProviderId + "|" + id, title, artist, link.album,
+                    link.selectedProvider.name, "", link.artworkUri, link.durationMs, 0);
+            playing = link.playing;
+        } else if (preview && current == null) {
             List<Track> demos = DemoCatalog.load(context);
             if (!demos.isEmpty()) current = demos.get(0);
             if (recent.isEmpty()) recent = demos;
         }
-        String album = current == null ? null : current.albumKey();
+        String album = current == null ? null : link == null ? current.albumKey() : current.id;
         String coverUri = coverUri(themes, current);
-        Bitmap cover = loadImage(context, coverUri, false);
+        Bitmap cover = link != null && link.artwork != null && !link.artwork.isRecycled() ? link.artwork : null;
+        if (cover != null) {
+            int edge = Math.max(cover.getWidth(),cover.getHeight());
+            if (edge > 384) cover = Bitmap.createScaledBitmap(cover, Math.max(1,cover.getWidth()*384/edge),Math.max(1,cover.getHeight()*384/edge),true);
+            if (cover.getConfig() == Bitmap.Config.HARDWARE) cover = cover.copy(Bitmap.Config.ARGB_8888,false);
+        }
+        if (cover == null) cover = loadImage(context, coverUri, false);
         AlbumPalette palette=paletteFor(coverUri,cover);
         if(palette!=null)themes.coverPalette(album,palette);
         int discStyle = DiscMaterials.normalize(themes.disc(album));
@@ -279,6 +317,7 @@ public class VinylWidgetProvider extends AppWidgetProvider {
         HashSet<String> albums = new HashSet<>();
         StringBuilder key = new StringBuilder(current == null ? "empty" : current.source + ":" + current.id + ":" + current.title + ":" + current.artist);
         key.append(':').append(coverUri).append(':').append(cover==null?0:cover.getGenerationId()).append(':').append(discStyle).append(':').append(color).append(':').append(recordTint).append(':').append(palette==null?0:palette.background).append(':').append(palette==null?0:palette.record).append(':').append(playing).append(':').append(Math.round(angle));
+        if (link != null) key.append(':').append(link.actions).append(':').append(link.connected);
         if (current != null) albums.add(current.albumKey());
         for (Track item : recent) {
             if (recentCovers.size() >= 4) break;
@@ -287,7 +326,7 @@ public class VinylWidgetProvider extends AppWidgetProvider {
             recentCovers.add(loadImage(context, uri, false));
             key.append('|').append(item.albumKey()).append(':').append(uri);
         }
-        return new Snapshot(current, playing, cover, disc, color, discStyle, recordTint,palette,angle, recentCovers, recentCovers.size(), key.toString());
+        return new Snapshot(current, playing, cover, disc, color, discStyle, recordTint,palette,angle, recentCovers, recentCovers.size(), key.toString(), link);
     }
 
     /** Called only while preparing a snapshot, never by render or each playback tick. */

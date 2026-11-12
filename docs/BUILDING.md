@@ -16,7 +16,7 @@ export PATH="$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_
 java -version
 python3 --version
 mvn -version
-sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
 ```
 
 SDK 工具提示许可协议时，在本机阅读并完成其交互流程。构建脚本本身不下载 Android SDK 或自动接受协议。
@@ -62,7 +62,13 @@ fi
 
 这里的 `android` 是本地自签开发用途的公开约定密码，不是原发布签名的私钥。生成相同的别名和密码也不会得到相同的签名身份。不要提交 keystore；不要用这组公开密码管理正式发行密钥。
 
-## 4. 构建 APK
+## 4. 构建本地解码器和 APK
+
+在 macOS 或 Linux 上先安装 make、tar 和 xz。以下脚本校验 FFmpeg 8.1.3 官方源码摘要，使用 NDK 28.2 分别生成 ARM64 和 ARMv7 的本地读取器。下载结果与中间文件保存在忽略提交的 `work/audio-codecs`。离线构建可使用本版 Release 随附的 `ffmpeg-8.1.3.tar.xz`，通过 `--archive /path/to/ffmpeg-8.1.3.tar.xz` 指定。
+
+```sh
+python3 tools/audio/build_codecs.py --ndk "$ANDROID_SDK_ROOT/ndk/28.2.13676358"
+```
 
 ```sh
 python3 tools/build.py \
@@ -70,7 +76,7 @@ python3 tools/build.py \
   --platform-jar "$ANDROID_SDK_ROOT/platforms/android-36/android.jar"
 ```
 
-当前版本产物为 `dist/vinyl-baseline-v0.7.9.apk`（版本代码 20），摘要位于 `dist/SHA256SUMS.txt`。版本和文件名从 AndroidManifest.xml 读取。构建会核对依赖摘要、合并真实 SDK 资源与声明、清除 Apple 授权模块的敏感调试日志，并验证 APK 签名及 16 KB 对齐。
+当前版本产物为 `dist/vinyl-baseline-v0.8.0.apk`（版本代码 21），摘要位于 `dist/SHA256SUMS.txt`。版本和文件名从 AndroidManifest.xml 读取。构建会核对依赖摘要、合并真实 SDK 资源与声明、清除 Apple 授权模块的敏感调试日志，并验证 APK 签名及 16 KB 对齐。
 
 自签构建与 Release APK 不会有相同 SHA-256。公开导出还省略了已经停用的汽水直连网页资源，清单见 [excluded-legacy-assets.json](excluded-legacy-assets.json)；官方 App 媒体联动不使用这些资源。原 0.7.7 Release APK 保留其已验证的原始字节与签名。
 

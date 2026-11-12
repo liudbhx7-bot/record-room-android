@@ -22,16 +22,25 @@ import java.util.List;
 public final class LocalMusicImporter {
     private LocalMusicImporter() { }
     public static Track importTrack(Context c, Uri uri) throws Exception {
-        String filename = "本地音频";
+        String filename = or(uri.getLastPathSegment(),"本地音频");
         try (Cursor cursor = c.getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) filename = or(cursor.getString(0),filename);
         } catch (Exception ignored) { }
         String title=filename.replaceFirst("\\.[^.]{1,6}$", ""),artist="未知歌手",album="本地单曲",albumArtist="",art="",genre="",year="";
         long duration=0;int number=0;
         String id=hex(MessageDigest.getInstance("SHA-256").digest(uri.toString().getBytes(StandardCharsets.UTF_8)));
-        MediaMetadataRetriever r = new MediaMetadataRetriever();
-        try {
+        byte[] cover=null;
+        try(LocalFormatDataSource.Reader reader=LocalFormatDataSource.inspect(c,uri,null)){
+          if(reader!=null) {
+            title=reader.value("title",title);artist=reader.value("artist",artist);album=reader.value("album",album);
+            albumArtist=reader.value("album_artist","");genre=reader.value("genre","");year=reader.value("date","");
+            number=(int)number(reader.value("track","0").split("/")[0]);duration=reader.duration();cover=reader.cover();
+          } else {
+            MediaMetadataRetriever r = new MediaMetadataRetriever();
+            try {
             r.setDataSource(c, uri);
+            if (!"yes".equalsIgnoreCase(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO))
+                    && !hasAudioTrack(c,uri)) throw new java.io.IOException("文件不包含音频");
             title=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),title);
             artist=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),artist);
             albumArtist=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),artist);
@@ -41,7 +50,9 @@ public final class LocalMusicImporter {
             duration=number(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
             String track=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER),"0");
             number=(int)number(track.split("/")[0]);
-            byte[] cover=r.getEmbeddedPicture();
+            cover=r.getEmbeddedPicture();
+            } finally { try { r.release(); } catch (Exception ignored) { } }
+          }
             if(cover!=null && cover.length<16*1024*1024) {
                 BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
                 BitmapFactory.decodeByteArray(cover,0,cover.length,bounds);
@@ -53,8 +64,20 @@ public final class LocalMusicImporter {
                     bitmap.recycle();art=Uri.fromFile(f).toString();
                 }
             }
-        } finally { try { r.release(); } catch (Exception ignored) { } }
+        }
         return new Track(id,title,artist,album,"本地音乐",uri.toString(),art,duration,number,albumArtist,genre,year);
+    }
+    private static boolean hasAudioTrack(Context c,Uri uri) {
+        android.media.MediaExtractor extractor = new android.media.MediaExtractor();
+        try {
+            extractor.setDataSource(c,uri,null);
+            for(int i=0;i<extractor.getTrackCount();i++){
+                String mime=extractor.getTrackFormat(i).getString(android.media.MediaFormat.KEY_MIME);
+                if(mime!=null && mime.startsWith("audio/"))return true;
+            }
+        } catch (Exception ignored) { }
+        finally { extractor.release(); }
+        return false;
     }
     private static String or(String a,String b){return a==null||a.trim().isEmpty()?b:a.trim();}
     private static long number(String s){try{return Math.max(0,Long.parseLong(s));}catch(Exception e){return 0;}}

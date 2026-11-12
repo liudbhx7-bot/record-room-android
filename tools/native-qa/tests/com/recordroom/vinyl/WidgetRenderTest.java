@@ -68,8 +68,8 @@ public class WidgetRenderTest {
     private static void waitPreviews(WidgetAppearanceActivity activity) throws Exception {
         ((ExecutorService)value(activity, "previewsIO")).submit(() -> { }).get(20, TimeUnit.SECONDS);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        for (ImageView image : (ImageView[])value(activity, "previews"))
-            assertNotNull("The settings page must display each actual rendered preview", image.getDrawable());
+        ImageView preview = (ImageView)value(activity, "preview");
+        assertNotNull("The single stand must display the selected rendered widget", preview.getDrawable());
     }
 
     private static void png(Bitmap bitmap, String name) throws Exception {

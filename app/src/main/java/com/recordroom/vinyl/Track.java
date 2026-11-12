@@ -9,6 +9,9 @@ public final class Track {
     public final String id, title, artist, album, source, uri, artworkUri, albumArtist, genre, year;
     public final String provider, albumId, artistId, albumArtistId;
     public final long durationMs;
+    /** For tracks indexed by a local CUE sheet. -1 for an unbounded source/end. */
+    public final long clipStartMs, clipEndMs;
+    public final String cueDocumentUri;
     public final int trackNumber;
     public Track(String id, String title, String artist, String album, String source, String uri, String artworkUri, long durationMs, int trackNumber) {
         this(id,title,artist,album,source,uri,artworkUri,durationMs,trackNumber,artist);
@@ -26,6 +29,15 @@ public final class Track {
         this(id,title,artist,album,source,uri,artworkUri,durationMs,trackNumber,albumArtist,genre,year,provider,albumId,artistId,albumArtistId,PlaybackAccess.UNKNOWN);
     }
     private Track(String id, String title, String artist, String album, String source, String uri, String artworkUri, long durationMs, int trackNumber, String albumArtist, String genre, String year, String provider, String albumId, String artistId, String albumArtistId, PlaybackAccess playbackAccess) {
+        this(id,title,artist,album,source,uri,artworkUri,durationMs,trackNumber,albumArtist,genre,year,
+                provider,albumId,artistId,albumArtistId,playbackAccess,-1,-1,"");
+    }
+    private Track(String id,String title,String artist,String album,String source,String uri,String artworkUri,
+                  long durationMs,int trackNumber,String albumArtist,String genre,String year,String provider,
+                  String albumId,String artistId,String albumArtistId,PlaybackAccess playbackAccess,long clipStartMs,long clipEndMs,String cueDocumentUri) {
+        this.clipStartMs = clipStartMs >= 0 && (clipEndMs < 0 || clipEndMs > clipStartMs) ? clipStartMs : -1;
+        this.clipEndMs = this.clipStartMs >= 0 ? clipEndMs : -1;
+        this.cueDocumentUri = this.clipStartMs >= 0 ? clean(cueDocumentUri,"") : "";
         this.playbackAccess=playbackAccess==null?PlaybackAccess.UNKNOWN:playbackAccess;
         this.provider=clean(provider,"");this.albumId=canonicalAlbumId(this.provider,clean(albumId,""));this.artistId=clean(artistId,"");this.albumArtistId=clean(albumArtistId,this.artistId);
         this.id = clean(id, uri); this.title = clean(title, "未知歌曲"); this.artist = clean(artist, "未知歌手");
@@ -36,7 +48,13 @@ public final class Track {
     }
     public Track withPlaybackAccess(PlaybackAccess access) {
         PlaybackAccess value=access==null?PlaybackAccess.UNKNOWN:access;
-        return value==playbackAccess?this:new Track(id,title,artist,album,source,uri,artworkUri,durationMs,trackNumber,albumArtist,genre,year,provider,albumId,artistId,albumArtistId,value);
+        return value==playbackAccess?this:new Track(id,title,artist,album,source,uri,artworkUri,durationMs,trackNumber,albumArtist,genre,year,provider,albumId,artistId,albumArtistId,value,clipStartMs,clipEndMs,cueDocumentUri);
+    }
+    Track localSegment(int number,String songTitle,String songArtist,String albumTitle,String performer,
+                       String category,String releaseYear,long start,long end,String cueUri) {
+        long duration = end >= 0 ? end - start : Math.max(0, durationMs - start);
+        return new Track(id + "#cue-" + number,songTitle,songArtist,albumTitle,source,uri,artworkUri,duration,number,
+                performer,category,releaseYear,provider,albumId,artistId,albumArtistId,playbackAccess,start,end,cueUri);
     }
     public String accessLabel() { return playbackAccess==PlaybackAccess.VIP?"需 VIP":playbackAccess==PlaybackAccess.PURCHASE?"需单独购买":""; }
     private static PlaybackAccess readPlaybackAccess(JSONObject json) {
@@ -51,10 +69,10 @@ public final class Track {
     private static String canonical(String value){return java.text.Normalizer.normalize(value,java.text.Normalizer.Form.NFKC).trim().replaceAll("\\s+"," ").toLowerCase(java.util.Locale.ROOT);}
     public JSONObject toJson() {
         JSONObject j = new JSONObject();
-        try { j.put("id",id); j.put("title",title); j.put("artist",artist); j.put("album",album); j.put("albumArtist",albumArtist); j.put("source",source); j.put("uri",uri); j.put("artworkUri",artworkUri); j.put("durationMs",durationMs); j.put("trackNumber",trackNumber); j.put("genre",genre); j.put("year",year); j.put("provider",provider);j.put("albumId",albumId);j.put("artistId",artistId);j.put("albumArtistId",albumArtistId);j.put("playbackAccess",playbackAccess.name()); } catch (Exception ignored) { }
+        try { j.put("id",id); j.put("title",title); j.put("artist",artist); j.put("album",album); j.put("albumArtist",albumArtist); j.put("source",source); j.put("uri",uri); j.put("artworkUri",artworkUri); j.put("durationMs",durationMs); j.put("trackNumber",trackNumber); j.put("genre",genre); j.put("year",year); j.put("provider",provider);j.put("albumId",albumId);j.put("artistId",artistId);j.put("albumArtistId",albumArtistId);j.put("playbackAccess",playbackAccess.name()); if(clipStartMs >= 0){j.put("clipStartMs",clipStartMs);j.put("clipEndMs",clipEndMs);if(!cueDocumentUri.isEmpty())j.put("cueDocumentUri",cueDocumentUri);} } catch (Exception ignored) { }
         return j;
     }
     public static Track fromJson(JSONObject j) {
-        return new Track(j.optString("id"),j.optString("title"),j.optString("artist"),j.optString("album"),j.optString("source"),j.optString("uri"),j.optString("artworkUri"),j.optLong("durationMs"),j.optInt("trackNumber"),j.optString("albumArtist"),j.isNull("genre") ? "" : j.optString("genre", ""),j.isNull("year") ? "" : j.optString("year", ""), j.optString("provider",j.optString("uri").startsWith("netease://")?"netease":""),j.optString("albumId",""),j.optString("artistId",""),j.isNull("albumArtistId")?"":j.optString("albumArtistId",""),readPlaybackAccess(j));
+        return new Track(j.optString("id"),j.optString("title"),j.optString("artist"),j.optString("album"),j.optString("source"),j.optString("uri"),j.optString("artworkUri"),j.optLong("durationMs"),j.optInt("trackNumber"),j.optString("albumArtist"),j.isNull("genre") ? "" : j.optString("genre", ""),j.isNull("year") ? "" : j.optString("year", ""), j.optString("provider",j.optString("uri").startsWith("netease://")?"netease":""),j.optString("albumId",""),j.optString("artistId",""),j.isNull("albumArtistId")?"":j.optString("albumArtistId",""),readPlaybackAccess(j),j.optLong("clipStartMs",-1),j.optLong("clipEndMs",-1),j.optString("cueDocumentUri",""));
     }
 }

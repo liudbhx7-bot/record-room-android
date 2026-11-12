@@ -148,6 +148,7 @@ public final class ExternalMusicBridge implements AutoCloseable {
     private PlaybackState playback;
     private State state;
     private boolean started, closed, sessionFailure;
+    private boolean timelineTicks = true;
     private long bindingGeneration;
     private final Runnable accessChanged = () -> { if (started && !closed) refresh(); };
     private final Runnable tick = new Runnable() {
@@ -155,7 +156,7 @@ public final class ExternalMusicBridge implements AutoCloseable {
             if (!started || closed || selectedSession == null) return;
             if (!access.hasAccess() || !access.isConnected()) { refresh(); return; }
             emit();
-            if (started && !closed && selectedSession != null) handler.postDelayed(this, 500);
+            if (timelineTicks && started && !closed && selectedSession != null) handler.postDelayed(this, 500);
         }
     };
 
@@ -166,6 +167,9 @@ public final class ExternalMusicBridge implements AutoCloseable {
         this.access = access; this.handler = handler; this.listener = listener;
         state = snapshot();
     }
+
+    /** Static widgets only need real media callbacks, never playback-position ticks. */
+    void disableTimelineTicks() { timelineTicks = false; handler.removeCallbacks(tick); }
 
     public State getState() { checkThread(); return state; }
     public String getSelectedProviderId() { return selectedProvider == null ? "" : selectedProvider.id; }
@@ -258,7 +262,7 @@ public final class ExternalMusicBridge implements AutoCloseable {
             }
         }
         if (session != null) {
-            readSession(); handler.removeCallbacks(tick); handler.postDelayed(tick, 500);
+            readSession(); handler.removeCallbacks(tick); if (timelineTicks) handler.postDelayed(tick, 500);
         }
     }
     private boolean currentBinding(Session session, long generation) {

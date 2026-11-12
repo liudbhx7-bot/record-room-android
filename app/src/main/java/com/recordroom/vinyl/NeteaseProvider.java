@@ -216,6 +216,7 @@ public final class NeteaseProvider implements MusicProvider {
         if(more&&values.isEmpty())throw invalid("音乐人专辑分页未前进");
         return new Page<>(values,response.optInt("albumSize",-1),offset+values.size(),more);
     }
+    @Override public boolean supportsAlbumSearch(){return true;}
     @Override public Page<Album> searchAlbums(String query,int offset,int limit)throws ProviderException{
         if(query==null||query.trim().isEmpty())return new Page<>(Collections.emptyList(),0,0,false);
         if(offset<0)throw invalid("搜索页码无效");limit=Math.max(1,Math.min(100,limit));

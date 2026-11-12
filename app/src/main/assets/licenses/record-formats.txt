@@ -1,0 +1,9 @@
+This application uses FFmpeg 8.1.3, copyright the FFmpeg developers,
+licensed under the GNU Lesser General Public License v2.1 or later.
+See FFmpeg-LGPL-2.1.txt. The FFmpeg libraries included here are built
+without GPL, nonfree or network components.
+
+Corresponding FFmpeg source:
+https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.0/ffmpeg-8.1.3.tar.xz
+Build instructions, Android bridge and scripts:
+https://github.com/liudbhx7-bot/record-room-android/tree/v0.8.0

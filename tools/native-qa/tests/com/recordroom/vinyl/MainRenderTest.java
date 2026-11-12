@@ -61,8 +61,10 @@ public class MainRenderTest {
         Field player=MainActivity.class.getDeclaredField("player");player.setAccessible(true);player.set(activity,service);
         call(activity,"refresh",new Class<?>[0]);waitArt();
         shot(activity.getWindow().getDecorView(),512,726,"main-portrait-chrome-api34.png");
-        call(activity,"setChromeVisible",new Class<?>[]{boolean.class,boolean.class},false,false);
-        shot(activity.getWindow().getDecorView(),512,726,"main-portrait-immersive-api34.png");
+        call(activity,"showPlayerTools",new Class<?>[0]);
+        Dialog drawer=(Dialog)field(activity,"toolDrawer");
+        shot(drawer.getWindow().getDecorView(),420,230,"main-thumb-tools-api34.png");
+        drawer.dismiss();
         call(activity,"showShelf",new Class<?>[0]);waitArt();
         Dialog shelf=(Dialog)field(activity,"shelfDialog");shot(shelf.getWindow().getDecorView(),512,726,"main-album-shelf-api34.png");
         ArrayList<Track> album=new ArrayList<>();String key=demos.get(0).albumKey();for(Track t:demos)if(t.albumKey().equals(key))album.add(t);

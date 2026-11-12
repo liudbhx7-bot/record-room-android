@@ -48,7 +48,7 @@ import java.util.concurrent.Executors;
 
 /** A small native player. The service is the single source of playback state. */
 public final class MainActivity extends Activity {
-    private static final int PICK_AUDIO = 101, PICK_ART = 102, NETEASE_WEB_LOGIN = 103, QQ_WEB_LOGIN=104, QISHUI_LOGIN=105, APPLE_LOGIN=106;
+    private static final int PICK_AUDIO = 101, PICK_ART = 102, NETEASE_WEB_LOGIN = 103, QQ_WEB_LOGIN=104, QISHUI_LOGIN=105, APPLE_LOGIN=106, PICK_LYRICS=107;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final ArrayList<Track> library = new ArrayList<>();
@@ -86,9 +86,11 @@ public final class MainActivity extends Activity {
     private AggregateSearchPage aggregatePage;
     private boolean bindingRegistered, libraryReady, foreground, destroyed;
     private FrameLayout root;
-    private LinearLayout header, details, footer, hardwareRow;
-    private View chromeDock, appearanceEntry;
-    private PlayerControls.Icon dockPlay, dockCover;
+    private LinearLayout details, hardwareRow;
+    private Button toolEntry;
+    private PlayerToolDrawer toolDrawer;
+    private Dialog lyricsDialog;
+    private String lyricsTrack = "", pendingLyricsTrack = "";
     private final ArrayList<Dialog> dialogs = new ArrayList<>();
     private final LinkedHashMap<Dialog, Runnable> pageRestorers = new LinkedHashMap<>();
     private final LinkedHashMap<Dialog, java.util.function.Supplier<Bundle>> pageSnapshots = new LinkedHashMap<>();
@@ -120,7 +122,7 @@ public final class MainActivity extends Activity {
     private ScrollView shelfSongScroll;
     private LibraryBrowserList shelfResults;
     private final Runnable delayedShelfSearch=()->{if(shelfDialog!=null&&shelfDialog.isShowing()){renderShelf();}};
-    private boolean shelfSongs, chromeVisible = true, wasPlaying;
+    private boolean shelfSongs, wasPlaying;
     private int fullPages;
     private AlbumSongAdapter albumAdapter;
     private final ArrayList<TextView> albumRows = new ArrayList<>();
@@ -132,7 +134,7 @@ public final class MainActivity extends Activity {
         final PlayerControls.Icon play,cover;
         AlbumPageState(ArrayList<Track> songs,AlbumSongAdapter adapter,PlayerControls.Icon play,PlayerControls.Icon cover){this.songs=songs;this.adapter=adapter;this.play=play;this.cover=cover;}
     }
-    private final Runnable hideChrome = () -> { if (fullPages == 0 && isPlaybackPlaying()) setChromeVisible(false, true); };
+    private final Runnable hideChrome = () -> { if (toolDrawer != null && isPlaybackPlaying()) toolDrawer.dismiss(); };
     private final Runnable listener = this::refresh;
     private final ServiceConnection connection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {
@@ -156,7 +158,7 @@ public final class MainActivity extends Activity {
         needleSound = new NeedleSound(this);
         if(state!=null&&state.getBundle("share_session")!=null)shareStudio=ShareStudio.restore(this,state.getBundle("share_session"));
         if(state!=null&&state.getBundle("draft_session")!=null)activeDraft=PlaylistDraftDialog.restore(this,collections,library,state.getBundle("draft_session"),this::playlistSaved);
-        if(state!=null){artAlbum=state.getString("pending_art_album","");pendingPages=state.getParcelableArrayList("navigation_pages");shelfSongs=state.getBoolean("shelf_songs");}
+        if(state!=null){pendingLyricsTrack=state.getString("pending_lyrics_track","");artAlbum=state.getString("pending_art_album","");pendingPages=state.getParcelableArrayList("navigation_pages");shelfSongs=state.getBoolean("shelf_songs");}
         shelfGrid = getPreferences(MODE_PRIVATE).getBoolean("shelf_grid", false);
         shelfSort = getPreferences(MODE_PRIVATE).getInt("shelf_sort", 0);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
@@ -181,7 +183,7 @@ public final class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle out){
         if(shareStudio!=null&&(shareStudio.isVisible()||shareStudio.hasPendingSave()))out.putBundle("share_session",shareStudio.snapshot());
         if(activeDraft!=null)out.putBundle("draft_session",activeDraft.snapshot());
-        out.putString("pending_art_album",artAlbum);out.putBoolean("shelf_songs",shelfSongs);
+        out.putString("pending_lyrics_track",pendingLyricsTrack);out.putString("pending_art_album",artAlbum);out.putBoolean("shelf_songs",shelfSongs);
         ArrayList<Bundle> pages=new ArrayList<>();
         for(Dialog d:new ArrayList<>(dialogs)){java.util.function.Supplier<Bundle> snapshot=pageSnapshots.get(d);if(d.isShowing()&&snapshot!=null){Bundle b=snapshot.get();b.putBundle("scroll",ViewScrollState.capture(d.getWindow().getDecorView()));pages.add(b);}}
         out.putParcelableArrayList("navigation_pages",pendingPages!=null?pendingPages:pages);super.onSaveInstanceState(out);
@@ -198,6 +200,8 @@ public final class MainActivity extends Activity {
     private void restorePage(Bundle b){
         Dialog restored=null;
         switch(b.getString("type","")){
+            case "player_tools":showPlayerTools();break;
+            case "track_lyrics":if (b.getString("track","").equals(lyricsIdentity())) showLyrics();break;
             case "aggregate_search":showAggregateSearch(b.getBundle("search"));break;
             case "shelf":shelfSongs=b.getBoolean("songs");showShelf();shelfSearch.setVisibility(b.getInt("search_visibility",View.GONE));shelfSearch.setText(b.getString("query",""));searchLimit=b.getInt("limit",80);renderShelf();restored=shelfDialog;break;
             case "album":
@@ -254,14 +258,12 @@ public final class MainActivity extends Activity {
             if (reopen != null) restore.add(reopen);
         }
         TurntableView previousTurntable=turntable;
-        boolean previousChrome = chromeVisible;
         boolean rebuildingShare=shareStudio!=null&&shareStudio.isVisible();
         if (turntable != null) turntable.setActive(false);
         dismissDialogs();
         if(rebuildingShare)shareStudio=null;
         activeDraft=null;
         buildMain(); turntable.restorePlaybackPoseFrom(previousTurntable); applyAppearance(); refresh();
-        setChromeVisible(previousChrome, false);
         for (Runnable reopen : restore) reopen.run();
     }
     @Override public void onDestroy() {
@@ -301,9 +303,9 @@ public final class MainActivity extends Activity {
         setContentView(root);
         LinearLayout content = column(); content.setPadding(dp(24), dp(14), dp(24), dp(12)); content.setClipChildren(false); content.setClipToPadding(false);
         root.addView(content, new FrameLayout.LayoutParams(-1, -1));
-        root.setOnClickListener(v -> setChromeVisible(!chromeVisible, true));
-        turntable = new TurntableView(this);turntable.updateArtworkInPlace(currentArtwork); turntable.setContentDescription("唱机，点按显示或收起工具；拖动唱臂定位，落针播放，抬针暂停");
-        turntable.setOnClickListener(v -> setChromeVisible(!chromeVisible, true));
+
+        turntable = new TurntableView(this);turntable.updateArtworkInPlace(currentArtwork); turntable.setContentDescription("唱机，点按打开播放工具；拖动唱臂定位，落针播放，抬针暂停");
+        turntable.setOnClickListener(v -> showPlayerTools());
         turntable.setNeedleListener(new TurntableView.NeedleListener() {
             public void onNeedleSeek(float progress) { seekPlayback((long)(playbackDuration()*progress)); }
             public void onNeedlePlay() { if(usingExternal()){if(!externalMusic.play())toast(externalMusic.getState().statusMessage);refresh();}else if(player!=null){playNeedle();player.startPlayback();} }
@@ -314,7 +316,15 @@ public final class MainActivity extends Activity {
         artist = text("正在准备唱片…", 14, mutedInk); artist.setMinHeight(dp(32));artist.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); artist.setMaxLines(1); artist.setEllipsize(TextUtils.TruncateAt.END); artist.setPadding(0, 0, 0, 0);
         artist.setOnClickListener(v -> { if(usingExternal())openOfficial(externalMusic.getState().selectedProviderId);else if(player!=null&&player.getCurrent()!=null)showArtist(player.getCurrent()); });
         title.setOnClickListener(v -> showCurrentAlbum());
-        details.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout captionRow = row();
+        captionRow.setGravity(Gravity.CENTER_VERTICAL);
+        captionRow.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        toolEntry = quietButton("工具  ⌃","打开播放工具",this::showPlayerTools);
+        toolEntry.setTextSize(14);
+        toolEntry.setMinHeight(dp(48));
+        toolEntry.setBackground(PlayerControls.glassCapsule(this));
+        captionRow.addView(toolEntry, new LinearLayout.LayoutParams(-2,-2));
+        details.addView(captionRow);
         LinearLayout.LayoutParams artistParams = new LinearLayout.LayoutParams(-1, -2); artistParams.topMargin = dp(2); details.addView(artist, artistParams);
         subtitle = text("", 10, mutedInk); subtitle.setLetterSpacing(.12f); subtitle.setGravity(Gravity.START);
         status = text("", 12, ink); status.setVisibility(View.GONE); details.addView(status);
@@ -345,30 +355,6 @@ public final class MainActivity extends Activity {
             // Include font scaling, multi-line errors and system insets in the reserved deck space.
             details.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->turntable.setCaptionInsetPx(b-t+bottom));
         }
-        header = row();PlayerControls.Icon searchCatalog=iconButton("search","搜索在线曲库",()->showCatalogSearch(""));searchCatalog.setGlass(true);header.addView(searchCatalog);PlayerControls.Icon settings = iconButton("settings", "播放器设置", this::showSettings); settings.setGlass(true); header.addView(settings);
-        FrameLayout.LayoutParams headerParams = new FrameLayout.LayoutParams(-2, dp(48), Gravity.TOP | Gravity.END); headerParams.setMargins(0, dp(4), dp(14), 0); root.addView(header, headerParams);
-        LinearLayout dockHolder = column(); PlayerControls.Icon more = iconButton("more", "更多操作", this::showTrackMenu); more.setGlass(true); dockHolder.addView(more, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        footer = column(); footer.setBackground(PlayerControls.glassCapsule(this)); LinearLayout.LayoutParams capsuleParams = new LinearLayout.LayoutParams(dp(48), -2); capsuleParams.topMargin = dp(8); dockHolder.addView(footer, capsuleParams);
-        footer.addView(iconButton("albums", "打开专辑架", this::showShelf));
-        dockCover = iconButton("disc", "当前专辑", this::showCurrentAlbum); dockCover.setArtwork(currentArtwork); footer.addView(dockCover);
-        dockPlay = iconButton("play", "播放或暂停", () -> { togglePlayback(); scheduleChromeHide(); }); footer.addView(dockPlay);
-        View divider = new View(this); divider.setBackgroundColor(0x283d3037); LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(-1, dp(1)); dividerParams.setMargins(dp(12), dp(3), dp(12), dp(3)); footer.addView(divider, dividerParams);
-        footer.addView(iconButton("queue", "播放队列与进度", this::showQueue));
-        // Keep the tool shelf clear of the timeline and of the three always-available transport keys.
-        // In wide or short windows a single horizontal strip uses less vertical space.
-        boolean strip = wide || config.screenHeightDp < 680;
-        if(strip){
-            dockHolder.setOrientation(LinearLayout.HORIZONTAL);footer.setOrientation(LinearLayout.HORIZONTAL);
-            LinearLayout.LayoutParams stripCapsule=new LinearLayout.LayoutParams(dp(48*4),dp(48));
-            stripCapsule.leftMargin=dp(6);footer.setLayoutParams(stripCapsule);
-            footer.removeView(divider);
-        }
-        FrameLayout.LayoutParams dockParams = new FrameLayout.LayoutParams(strip?-2:dp(48),-2,Gravity.END|Gravity.TOP);
-        dockParams.setMargins(0,dp(58),dp(14),0);root.addView(dockHolder,dockParams);chromeDock=dockHolder;
-        PlayerControls.Icon appearance=iconButton("palette","唱片材质与背景",this::showAppearance);appearance.setGlass(true);appearanceEntry=appearance;
-        FrameLayout.LayoutParams appearanceParams=new FrameLayout.LayoutParams(dp(48),dp(48),Gravity.TOP|Gravity.END);
-        appearanceParams.setMargins(0,dp(4),dp(110),0);root.addView(appearance,appearanceParams);
-        setChromeVisible(chromeVisible, false);
         root.requestApplyInsets();
     }
     private PlayerControls.Icon iconButton(String name, String description, Runnable action) {
@@ -377,17 +363,93 @@ public final class MainActivity extends Activity {
     private PlayerControls.Hardware hardwareButton(String name, String description, Runnable action) {
         PlayerControls.Hardware v = new PlayerControls.Hardware(this, name); v.setContentDescription(description); v.setOnClickListener(w -> action.run()); return v;
     }
-    private void setChromeVisible(boolean visible, boolean animate) {
-        chromeVisible = visible; handler.removeCallbacks(hideChrome);
-        for (View view : new View[]{header, chromeDock, appearanceEntry}) { if (view == null) continue; view.animate().cancel(); if (visible) view.setVisibility(View.VISIBLE); if (animate) view.animate().alpha(visible ? 1 : 0).setDuration(230).withEndAction(() -> { if (!chromeVisible) view.setVisibility(View.INVISIBLE); }).start(); else { view.setAlpha(visible ? 1 : 0); view.setVisibility(visible ? View.VISIBLE : View.INVISIBLE); } }
-        if (visible) scheduleChromeHide();
+    private void showPlayerTools() {
+        if (toolDrawer != null && toolDrawer.isShowing()) return;
+        PlayerToolDrawer drawer = new PlayerToolDrawer(this, this::showAudioQuality, this::showTrackMenu, this::scheduleChromeHide);
+        drawer.addTool("search","搜索",() -> showCatalogSearch(""));
+        drawer.addTool("albums","资料库",this::showShelf);
+        drawer.addTool("queue","队列",this::showQueue);
+        drawer.addTool("lyrics","歌词",this::showLyrics);
+        drawer.addTool("disc","外观",this::showAppearance);
+        drawer.addTool("settings","设置",this::showSettings);
+        drawer.tint(playerSurfaceColor,ink,themes.deckTint(albumKey()));
+        toolDrawer = drawer;
+        dialogs.add(drawer);
+        pageSnapshots.put(drawer,() -> pageState("player_tools"));
+        drawer.setOnDismissListener(d -> {
+            dialogs.remove(drawer);
+            pageSnapshots.remove(drawer);
+            if (toolDrawer == drawer) {
+                toolDrawer = null;
+                handler.removeCallbacks(hideChrome);
+            }
+        });
+        drawer.show();
+        scheduleChromeHide();
     }
-    private void scheduleChromeHide() { handler.removeCallbacks(hideChrome); if (themes.autoHide() && foreground && chromeVisible && (appearanceDialog==null||!appearanceDialog.isShowing()) && isPlaybackPlaying()) handler.postDelayed(hideChrome, 6000); }
+
+    private void scheduleChromeHide() {
+        handler.removeCallbacks(hideChrome);
+        if (toolDrawer == null || !toolDrawer.isShowing() || !foreground || !themes.autoHide() || !isPlaybackPlaying()) return;
+        android.view.accessibility.AccessibilityManager accessibility =
+            (android.view.accessibility.AccessibilityManager)getSystemService(ACCESSIBILITY_SERVICE);
+        if (accessibility != null && accessibility.isTouchExplorationEnabled()) return;
+        int timeout = 6000;
+        if (android.os.Build.VERSION.SDK_INT >= 29 && accessibility != null) {
+            timeout = accessibility.getRecommendedTimeoutMillis(timeout,android.view.accessibility.AccessibilityManager.FLAG_CONTENT_CONTROLS);
+        }
+        handler.postDelayed(hideChrome, timeout);
+    }
+    private String lyricsIdentity() {
+        if (usingExternal()) {
+            ExternalMusicBridge.State state = externalMusic.getState();
+            return state.connected && !state.title.isEmpty() ? externalTrackKey(state) : "";
+        }
+        Track current = player == null ? null : player.getCurrent();
+        return current == null ? "" : LibraryStore.identity(current);
+    }
+
+    private void showLyrics() {
+        String id = lyricsIdentity();
+        if (id.isEmpty()) { toast("先选择一首歌曲"); return; }
+        if (lyricsDialog != null && lyricsDialog.isShowing()) lyricsDialog.dismiss();
+        LinearLayout body = column();
+        String song = usingExternal() ? externalMusic.getState().title : player.getCurrent().title;
+        TextView lines = text("正在读取歌词…",17,DesignSystem.INK);
+        lines.setTextIsSelectable(true);
+        lines.setLineSpacing(dp(5),1.12f);
+        lines.setPadding(dp(4),dp(8),dp(4),dp(16));
+        body.addView(lines);
+        Dialog dialog = sheet(song+" · 歌词",body,false);
+        lyricsDialog = dialog;
+        lyricsTrack = id;
+        pageSnapshots.put(dialog,() -> { Bundle b=pageState("track_lyrics"); b.putString("track",id); return b; });
+        body.addView(actionButton("选择本地歌词文件",() -> {
+            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE);
+            pick.setType("*/*");
+            pendingLyricsTrack = id;
+            startActivityForResult(pick,PICK_LYRICS);
+        }));
+        String embedded = usingExternal() || player==null ? "" : player.currentEmbeddedLyrics();
+        io.execute(() -> {
+            String saved = TrackLyrics.load(this,id);
+            String lyrics = saved.isEmpty() ? embedded : saved;
+            handler.post(() -> {
+                if (destroyed || !dialog.isShowing()) return;
+                lines.setText(lyrics.isEmpty() ? "这首歌暂无可显示的歌词，可选择 LRC 或 TXT 文件。" : lyrics);
+                ScrollView scroll = (ScrollView)body.getParent();
+                scroll.getLayoutParams().height = Math.min((int)(root.getHeight()*.58f),
+                    measureBody(body,Math.max(dp(80),root.getWidth()-dp(44))));
+                scroll.requestLayout();
+            });
+        });
+    }
     private void showCurrentAlbum() { if(usingExternal()){openOfficial(externalMusic.getState().selectedProviderId);return;} Track current = player == null ? null : player.getCurrent(); if (current == null) { showShelf(); return; } if(OnlineMusic.isRemote(current)&&!current.albumId.isEmpty()){if(OnlineMusic.isNetease(current))showNetease(null,current.albumId,null);else openProviderAlbum(current);return;} ArrayList<Track> songs = new ArrayList<>(); for (Track t : library) if (t.albumKey().equals(current.albumKey())) songs.add(t); if (songs.isEmpty()) songs.add(current); sortAlbum(songs); showAlbum(songs); }
     private void refresh() {
         if (destroyed || title == null) return;
+        if (lyricsDialog != null && lyricsDialog.isShowing() && !lyricsTrack.equals(lyricsIdentity())) lyricsDialog.dismiss();
         if(usingExternal()){refreshExternal();return;}
-        turntable.setNeedleSeekingEnabled(player!=null&&player.canSeek()&&playbackDuration()>0);play.setEnabled(true);previous.setEnabled(true);next.setEnabled(true);if(dockPlay!=null)dockPlay.setEnabled(true);
+        turntable.setNeedleSeekingEnabled(player!=null&&player.canSeek()&&playbackDuration()>0);play.setEnabled(true);previous.setEnabled(true);next.setEnabled(true);
         Track track = player == null ? null : player.getCurrent();
         if (track != null) {
             title.setText(track.title); artist.setText(track.artist); subtitle.setText(track.album);
@@ -398,7 +460,6 @@ public final class MainActivity extends Activity {
             // Otherwise its callback can restore an album after the player is empty.
             artToken++; artSignature = ""; shownId = ""; shownAlbumKey = "";
             currentArtwork = null; visibleSleeveKey = ""; turntable.setArtwork(null);
-            if (dockCover != null) dockCover.setArtwork(null);
             if (albumDockCover != null) albumDockCover.setArtwork(null);
             title.setText("唱片机"); artist.setText("选择一张唱片开始播放"); subtitle.setText("");
             updateTimelines("",-1,-1,false);
@@ -411,7 +472,7 @@ public final class MainActivity extends Activity {
         if(queueDialog!=null&&queueDialog.isShowing()&&player!=null){String signature=(track==null?"":track.id)+"|"+player.getIndex()+"|"+player.getQueueRevision()+"|"+player.getPlayMode();if(!signature.equals(queueSignature)){queueSignature=signature;renderQueue();}}
         if(likeButton!=null)likeButton.setSymbol(collections.liked(track)?"heartfilled":"heart");
         turntable.setPlaying(playing); turntable.setActive(foreground && fullPages == 0);
-        play.setSymbol(playing?"pause":"play");play.setContentDescription(playing ? "暂停" : "播放"); if (dockPlay != null) dockPlay.setSymbol(playing ? "pause" : "play"); if (albumDockPlay != null) albumDockPlay.setSymbol(playing ? "pause" : "play");
+        play.setSymbol(playing?"pause":"play");play.setContentDescription(playing ? "暂停" : "播放"); if (albumDockPlay != null) albumDockPlay.setSymbol(playing ? "pause" : "play");
         if (playing && !wasPlaying) scheduleChromeHide(); wasPlaying = playing;
         String currentId = track == null ? "" : track.id;
         for(AlbumPageState page:albumPages.values()){page.adapter.setCurrent(track);page.play.setSymbol(playing?"pause":"play");}
@@ -447,8 +508,8 @@ public final class MainActivity extends Activity {
         if(themes.keepAwake())getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ink = readableInk(color); mutedInk = blend(ink,color,.20f);
         title.setTextColor(ink); artist.setTextColor(mutedInk); subtitle.setTextColor(mutedInk); status.setTextColor(ink);
-        for (int i = 0; i < header.getChildCount(); i++) if (header.getChildAt(i) instanceof TextView) ((TextView) header.getChildAt(i)).setTextColor(ink);
-        for (int i = 0; i < footer.getChildCount(); i++) if (footer.getChildAt(i) instanceof TextView) ((TextView) footer.getChildAt(i)).setTextColor(ink);
+        toolEntry.setTextColor(ink);
+        if(toolDrawer!=null && toolDrawer.isShowing()) toolDrawer.tint(color,ink,themes.deckTint(albumKey()));
         play.setInk(ink); previous.setInk(ink); next.setInk(ink);
         if(queueDialog!=null&&queueDialog.isShowing()){retintQueue(queueDialog.getWindow().getDecorView());if(queueRows!=null)queueRows.setInkColor(shelfInk());}
         styleProgressControls();
@@ -475,12 +536,42 @@ public final class MainActivity extends Activity {
         artSignature = signature; int token = ++artToken;
 
         // Keep the old sleeve visible until the new cover is decoded for a smooth record change.
-        io.execute(() -> { Bitmap image = LocalMusicImporter.loadArtwork(this, uri, 640);AlbumPalette palette=AlbumPalette.from(image); handler.post(() -> { if (!destroyed && token == artToken) { currentArtwork = image;ArtistPage.updatePlayback(artistPage,isPlaybackPlaying(),image,player!=null);themes.coverPalette(t.albumKey(),palette);showSleeve(image,"local:"+t.albumKey());applyAppearance(true); if (dockCover != null) dockCover.setArtwork(image);for(AlbumPageState page:albumPages.values())page.cover.setArtwork(image);if(shelfDialog!=null&&shelfDialog.isShowing()){shelfDialog.getWindow().getDecorView().invalidate();renderShelf();} } }); });
+        io.execute(() -> { Bitmap image = LocalMusicImporter.loadArtwork(this, uri, 640);AlbumPalette palette=AlbumPalette.from(image); handler.post(() -> { if (!destroyed && token == artToken) { currentArtwork = image;ArtistPage.updatePlayback(artistPage,isPlaybackPlaying(),image,player!=null);themes.coverPalette(t.albumKey(),palette);showSleeve(image,"local:"+t.albumKey());applyAppearance(true);for(AlbumPageState page:albumPages.values())page.cover.setArtwork(image);if(shelfDialog!=null&&shelfDialog.isShowing()){shelfDialog.getWindow().getDecorView().invalidate();renderShelf();} } }); });
     }
 
     private void pickAudio() {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT); intent.addCategory(Intent.CATEGORY_OPENABLE); intent.setType("audio/*"); intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT); intent.addCategory(Intent.CATEGORY_OPENABLE); intent.setType("*/*"); intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        toast("整轨专辑请同时选中 CUE 和对应音频文件");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION); startActivityForResult(intent, PICK_AUDIO);
+    }
+    private void showAudioQuality() {
+        LinearLayout body=column();
+        TextView report=text("",17,Color.WHITE);
+        report.setLineSpacing(dp(2),1);report.setPadding(0,dp(12),0,dp(16));body.addView(report);
+        if(!usingExternal() && player!=null && android.os.Build.VERSION.SDK_INT>=34){
+            android.widget.Switch follow=new android.widget.Switch(this);
+            follow.setText("USB 优先使用当前采样率");follow.setMinHeight(dp(48));
+            follow.setTextColor(Color.WHITE);follow.setChecked(player.usbFollowsSource());body.addView(follow);
+            follow.setOnCheckedChangeListener((v,enabled)->{if(player!=null)player.setUsbFollowsSource(enabled);});
+        }
+        Dialog dialog=sheet("音质与输出",body,false,true);
+        Runnable refreshQuality=new Runnable(){public void run(){
+            if(!dialog.isShowing()||destroyed)return;
+            String value=usingExternal()?"官方 App 正在控制音频输出。媒体会话未报告文件规格、采样率或位深。":
+                player==null?"播放歌曲后可查看音源与输出设备。":player.audioQuality();
+            if(!value.contentEquals(report.getText())){
+                android.text.SpannableString styled=new android.text.SpannableString(value);
+                java.util.regex.Matcher labels=java.util.regex.Pattern.compile("(?m)^([^\n]+)\n(?=[^\n])").matcher(value);
+                while(labels.find()){
+                    int a=labels.start(1),b=labels.end(1);
+                    styled.setSpan(new android.text.style.RelativeSizeSpan(.76f),a,b,0);
+                    styled.setSpan(new android.text.style.ForegroundColorSpan(0xffd2caca),a,b,0);
+                }
+                report.setText(styled);
+            }
+            report.postDelayed(this,750);
+        }};
+        refreshQuality.run();
     }
     private void pickArtwork() {
         if(usingExternal()){toast("联动时封面由官方音乐 App 提供");return;}
@@ -493,6 +584,26 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == PICK_LYRICS) {
+            String id = pendingLyricsTrack;
+            pendingLyricsTrack = "";
+            if (result == RESULT_OK && !id.isEmpty() && data != null && data.getData() != null) {
+                Uri uri = data.getData();
+                io.execute(() -> {
+                    try {
+                        TrackLyrics.importFile(this,id,uri);
+                        handler.post(() -> {
+                            if (destroyed) return;
+                            if (id.equals(lyricsIdentity())) showLyrics();
+                            else toast("歌词已保存到原曲目");
+                        });
+                    } catch (Exception ex) {
+                        handler.post(() -> { if (!destroyed) toast("歌词读取失败，请选择 256 KB 以内的 LRC 或 TXT 文本"); });
+                    }
+                });
+            }
+            return;
+        }
         if(aggregatePage!=null&&(request==QQ_WEB_LOGIN||request==APPLE_LOGIN||request==NETEASE_WEB_LOGIN))aggregatePage.refresh();
         if(request==QQ_WEB_LOGIN||request==QISHUI_LOGIN||request==APPLE_LOGIN){String providerId=request==QQ_WEB_LOGIN?"qq":request==QISHUI_LOGIN?"qishui":"applemusic";ProviderLibraryPage page=providerPages.get(providerId);if(page!=null)page.refreshAccount();return;}
         if(request==NETEASE_WEB_LOGIN){ProviderLibraryPage songsPage=providerPages.get("netease");if(songsPage!=null)songsPage.refreshAccount();if(neteasePage!=null)neteasePage.refreshAccount();else refreshNeteaseAfterRestore=true;return;}
@@ -511,18 +622,19 @@ public final class MainActivity extends Activity {
         ArrayList<Uri> uris = new ArrayList<>(); ClipData clips = data.getClipData();
         if (clips != null) for (int i = 0; i < clips.getItemCount(); i++) uris.add(clips.getItemAt(i).getUri()); else if (data.getData() != null) uris.add(data.getData());
         for (Uri uri : uris) keepAccess(uri, data);
-        toast("正在读取 " + uris.size() + " 首音乐…");
+        toast("正在读取 " + uris.size() + " 个文件…");
         io.execute(() -> {
-            ArrayList<Track> imported = new ArrayList<>(); int failed = 0;
-            for (Uri uri : uris) try { Track track = LocalMusicImporter.importTrack(this, uri); if (track != null) imported.add(track); else failed++; } catch (Exception error) { failed++; }
+            LocalCueImport.Result batch = LocalCueImport.read(this, uris);
             ArrayList<Track> all;
-            synchronized (LocalMusicImporter.class) { List<Track> before = LocalMusicImporter.loadLibrary(this); LinkedHashMap<String, Track> merged = new LinkedHashMap<>(); for (Track t : before) merged.put(t.uri, t); for (Track t : imported) merged.put(t.uri, t); all = new ArrayList<>(merged.values()); LocalMusicImporter.saveLibrary(this, all); }
-            int errors = failed;
+            synchronized (LocalMusicImporter.class) {
+                all = batch.merge(LocalMusicImporter.loadLibrary(this));
+                LocalMusicImporter.saveLibrary(this, all);
+            }
             handler.post(() -> {
                 if (destroyed) return;
                 ArrayList<Track> online=new ArrayList<>();for(Track t:library)if(OnlineMusic.isRemote(t))online.add(t);
                 local.clear(); local.addAll(all); library.clear(); library.addAll(DemoCatalog.load(this)); library.addAll(all);library.addAll(online); libraryReady = true; initializeQueue();
-                toast("已导入 " + imported.size() + " 首" + (errors > 0 ? "，" + errors + " 首无法读取" : ""));
+                toast(batch.summary());
                 if (shelfDialog != null && shelfDialog.isShowing()) renderShelf(); else showShelf();
 
             });
@@ -546,6 +658,21 @@ public final class MainActivity extends Activity {
             public void play(List<AggregateSearch.Result> results,int index){if(player==null||results.isEmpty())return;for(AggregateSearch.Result result:results)for(Track track:result.alternatives)rememberProvider(OnlineMusic.providerId(track),Collections.singletonList(track));playNeedle();player.setAggregateQueue(results,index);returnToPlayer();}
             public void manageAccounts(){showMusicSources();}
             public void artist(AggregateSearch.ArtistResult result){showCatalogArtist(result.providerId,result.artist);}
+            public List<Track> libraryTracks(){return new ArrayList<>(library);}
+            public List<Track> recentTracks(){return collections.recent();}
+            public void libraryArtist(Track track){showArtist(track);}
+            public void catalogAlbum(AggregateSearch.AlbumResult value){openProviderAlbum(value.providerId,value.album.id,value.album.name);}
+            public void album(Track seed){
+                if(OnlineMusic.isRemote(seed)){openProviderAlbum(seed);return;}
+                ArrayList<Track> tracks=new ArrayList<>();
+                for(Track track:library)if(track.albumKey().equals(seed.albumKey()))tracks.add(track);
+                if(tracks.isEmpty())tracks.add(seed);
+                sortAlbum(tracks);showAlbum(tracks);
+            }
+            public void libraryPlay(List<Track> tracks,int index){
+                if(player==null||tracks.isEmpty())return;
+                playNeedle();player.setQueue(latestLocalTracks(tracks),index,true);returnToPlayer();
+            }
         },saved);aggregatePage=page;Dialog dialog=page.show();dialogs.add(dialog);fullPages++;turntable.setActive(false);handler.removeCallbacks(hideChrome);
         pageSnapshots.put(dialog,()->{Bundle state=pageState("aggregate_search");state.putBundle("search",page.snapshot());return state;});
         page.setOnClosed(()->{if(dialogs.remove(dialog))fullPages=Math.max(0,fullPages-1);pageSnapshots.remove(dialog);if(aggregatePage==page)aggregatePage=null;if(turntable!=null)turntable.setActive(foreground&&fullPages==0);});
@@ -671,7 +798,7 @@ public final class MainActivity extends Activity {
     }
     private void playAlbum(ArrayList<Track> songs, boolean random) { if (player == null || songs.isEmpty()) return; playNeedle(); player.setPlayMode(random ? PlayerService.MODE_SHUFFLE : PlayerService.MODE_ORDER); int start = random ? new java.util.Random().nextInt(songs.size()) : 0; player.setQueue(latestLocalTracks(songs), start, true); refresh(); }
     private Button outlineButton(String label, Runnable action) { Button b = quietButton(label, label, action); b.setTextColor(0xff29242d); GradientDrawable d = rounded(0x00ffffff, 24); d.setStroke(dp(1), 0xff958d96); b.setBackground(d); return b; }
-    private void returnToPlayer() { dismissDialogs(); setChromeVisible(true, true); refresh(); }
+    private void returnToPlayer() { dismissDialogs(); refresh(); }
     private void restoreTopAlbum(){
         albumDialog=null;albumAdapter=null;albumSongs.clear();albumDockPlay=null;albumDockCover=null;
         for(java.util.Map.Entry<Dialog,AlbumPageState> entry:albumPages.entrySet())if(entry.getKey().isShowing()){
@@ -712,12 +839,12 @@ public final class MainActivity extends Activity {
     private void showPlayModes(){if(usingExternal()){openOfficial(externalMusic.getState().selectedProviderId);return;}if(player==null)return;String[] modes={"顺序播放","列表循环","单曲循环","随机播放"};AlertDialog d=new AlertDialog.Builder(this).setTitle("播放模式").setSingleChoiceItems(modes,player.getPlayMode(),(a,which)->{player.setPlayMode(which);renderQueue();a.dismiss();}).create();trackDialog(d);d.show();}
     private void showAppearance() {
         if(appearanceDialog!=null&&appearanceDialog.isShowing())return;
-        handler.removeCallbacks(hideChrome);setChromeVisible(false,false);details.setVisibility(View.INVISIBLE);
+        handler.removeCallbacks(hideChrome);details.setVisibility(View.INVISIBLE);
         Track t=player==null?null:player.getCurrent();
         final Dialog[] owned = new Dialog[1];
         AppearanceEditor editor=new AppearanceEditor(this,themes,albumKey(),usingExternal()?externalMusic.getState().album:t==null?"":t.album,currentArtwork,()->{applyAppearance();VinylWidgetProvider.updateAll(this);},this::pickArtwork,()->{
             if(appearanceDialog!=owned[0])return;
-            if(appearanceDialog!=null){dialogs.remove(appearanceDialog);pageRestorers.remove(appearanceDialog);pageSnapshots.remove(appearanceDialog);}appearanceDialog=null;details.setVisibility(View.VISIBLE);setChromeVisible(true,true);
+            if(appearanceDialog!=null){dialogs.remove(appearanceDialog);pageRestorers.remove(appearanceDialog);pageSnapshots.remove(appearanceDialog);}appearanceDialog=null;details.setVisibility(View.VISIBLE);
         });appearanceDialog=editor.show();owned[0]=appearanceDialog;dialogs.add(appearanceDialog);pageRestorers.put(appearanceDialog,this::showAppearance);pageSnapshots.put(appearanceDialog,()->pageState("appearance"));
     }
     private boolean isPlaybackPlaying(){return usingExternal()?externalMusic.getState().playing:player!=null&&player.isPlaying();}
@@ -776,8 +903,8 @@ public final class MainActivity extends Activity {
             }
         }else if(songChanged&&!externalSleeveKey(state).equals(visibleSleeveKey)){externalArtworkHash=0;setExternalArtwork(null,false,signature);}
         if(sourcesPage!=null)sourcesPage.update(state);
-        turntable.setNeedleSeekingEnabled(state.canSeek&&state.durationMs>0);play.setEnabled(state.playing?state.canPause:state.canPlay);previous.setEnabled(state.canPrevious);next.setEnabled(state.canNext);if(dockPlay!=null)dockPlay.setEnabled(state.playing?state.canPause:state.canPlay);
-        play.setSymbol(state.playing?"pause":"play");play.setContentDescription(state.playing?"暂停":"播放");if(dockPlay!=null)dockPlay.setSymbol(state.playing?"pause":"play");
+        turntable.setNeedleSeekingEnabled(state.canSeek&&state.durationMs>0);play.setEnabled(state.playing?state.canPause:state.canPlay);previous.setEnabled(state.canPrevious);next.setEnabled(state.canNext);
+        play.setSymbol(state.playing?"pause":"play");play.setContentDescription(state.playing?"暂停":"播放");
         for(java.lang.ref.WeakReference<PlayerControls.Icon> ref:pagePlayButtons){PlayerControls.Icon icon=ref.get();if(icon!=null){icon.setSymbol(state.playing?"pause":"play");icon.setEnabled(state.playing?state.canPause:state.canPlay);}}
         long duration=Math.max(0,state.durationMs),position=Math.max(0,state.positionMs);
         updateTimelines(signature,state.positionMs,state.durationMs,state.canSeek);
@@ -803,7 +930,6 @@ public final class MainActivity extends Activity {
         String sleeveKey=externalSleeveKey(externalMusic.getState());
         if(newSong)showSleeve(artwork,sleeveKey);
         else { turntable.updateArtworkInPlace(artwork); visibleSleeveKey=sleeveKey; }
-        if(dockCover!=null)dockCover.setArtwork(artwork);
         themes.coverPalette(paletteKey,AlbumPalette.from(artwork));
         applyAppearance(true);
     }
@@ -866,8 +992,8 @@ public final class MainActivity extends Activity {
     }
     private Switch settingSwitch(String name,boolean checked,java.util.function.Consumer<Boolean> changed){Switch view=new Switch(this);view.setText(name);view.setTextSize(14);view.setTextColor(0xff3a313f);view.setPadding(dp(12),dp(6),dp(12),dp(6));view.setChecked(checked);view.setLayoutParams(new LinearLayout.LayoutParams(-1,dp(56)));view.setOnCheckedChangeListener((b,value)->changed.accept(value));return view;}
     private void showSleepTimer(){if(usingExternal()){toast("请在官方音乐 App 设置睡眠定时");return;}LinearLayout body=column();Dialog d=sheet("睡眠定时",body,false);long remaining=player==null?0:player.getSleepRemainingMs();TextView label=note(remaining>0?"剩余 "+time(remaining):"在选定时间后轻轻停下");body.addView(label);for(int minutes:new int[]{15,30,45,60,90,0})body.addView(actionButton(minutes==0?"关闭定时":minutes+" 分钟",()->{if(player!=null)player.setSleepTimerMinutes(minutes);d.dismiss();toast(minutes==0?"定时已关闭":minutes+" 分钟后暂停");}));}
-    private void showLicenses(){io.execute(()->{StringBuilder value=new StringBuilder();for(String name:new String[]{"dependencies.txt","apple-musickit.txt","netease-protocol.txt","mineradio-notice.txt","mineradio-GPL-3.0.txt"})try(java.io.InputStream in=getAssets().open("licenses/"+name)){java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);value.append(new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8)).append("\n\n");}catch(java.io.IOException ignored){}handler.post(()->{if(destroyed)return;LinearLayout body=column();TextView text=note(value.length()==0?"许可文件暂时无法读取":value.toString());text.setTextIsSelectable(true);body.addView(text);sheet("开源许可",body,true);});});}
-    private void showHelp(){LinearLayout body=column();body.addView(note("唱机\n拖动唱臂落针开始播放；沿唱片向内移动可以调整进度，移回右侧暂停。也可使用 PLAY、上一首与下一首。\n\n收藏\n在专辑架右上角切换网格与立体唱片架。点击专辑看曲目，点击音乐人进入作品页。长按歌曲可以喜欢、加入队列或歌单。\n\n外观\n点击左下角外观，实时选择盘面与背景；添加专辑专属外观后，仅对这张专辑生效。自定义颜色支持在封面上点按取色。\n\n队列与分享\n队列右上角选择播放模式；长按曲目拖动排序，更多菜单可移除。分享卡有三种布局，可保存图片或打开系统分享。"));sheet("操作指南",body,false);}
+    private void showLicenses(){io.execute(()->{StringBuilder value=new StringBuilder();for(String name:new String[]{"record-formats.txt","FFmpeg-LGPL-2.1.txt","dependencies.txt","apple-musickit.txt","netease-protocol.txt","mineradio-notice.txt","mineradio-GPL-3.0.txt"})try(java.io.InputStream in=getAssets().open("licenses/"+name)){java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);value.append(new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8)).append("\n\n");}catch(java.io.IOException ignored){}handler.post(()->{if(destroyed)return;LinearLayout body=column();TextView text=note(value.length()==0?"许可文件暂时无法读取":value.toString());text.setTextIsSelectable(true);body.addView(text);sheet("开源许可",body,true);});});}
+    private void showHelp(){LinearLayout body=column();body.addView(note("唱机\n拖动唱臂落针开始播放；沿唱片向内移动可以调整进度，移回右侧暂停。也可使用 PLAY、上一首与下一首。\n\n收藏\n在专辑架右上角切换网格与立体唱片架。点击专辑看曲目，点击音乐人进入作品页。长按歌曲可以喜欢、加入队列或歌单。\n\n外观\n点曲名旁的工具，再点外观，实时选择盘面与背景；添加专辑专属外观后，仅对这张专辑生效。自定义颜色支持在封面上点按取色。\n\n队列与分享\n队列右上角选择播放模式；长按曲目拖动排序，更多菜单可移除。分享卡有三种布局，可保存图片或打开系统分享。"));sheet("操作指南",body,false);}
     private void togglePlayback(){if(usingExternal()){if(!externalMusic.togglePlayPause())toast("当前来源暂未开放此播放操作");return;}if(player==null)return;if(!player.isPlaying()&&!player.isPreparing())playNeedle();player.toggle();}
     private void playNeedle(){useInternalSource();if(themes.needleSound()&&needleSound!=null)needleSound.play(player==null?1:player.getVolume());}
     private void addPageDock(FrameLayout page){LinearLayout capsule=column();capsule.setBackground(PlayerControls.glassCapsule(this));capsule.addView(iconButton("albums","专辑架",()->{if(shelfDialog==null||!shelfDialog.isShowing())showShelf();}));PlayerControls.Icon current=iconButton("disc","回到唱机",this::returnToPlayer);current.setArtwork(currentArtwork);capsule.addView(current);PlayerControls.Icon toggle=iconButton("play","播放或暂停",this::togglePlayback);toggle.setSymbol(player!=null&&player.isPlaying()?"pause":"play");pagePlayButtons.add(new java.lang.ref.WeakReference<>(toggle));capsule.addView(toggle);capsule.addView(iconButton("queue","打开播放队列",this::showQueue));FrameLayout.LayoutParams dock=new FrameLayout.LayoutParams(dp(48),-2,Gravity.END|Gravity.BOTTOM);dock.setMargins(0,0,dp(12),dp(18));page.addView(capsule,dock);}
@@ -908,15 +1034,18 @@ public final class MainActivity extends Activity {
         if(shelfDialog!=null&&shelfDialog.isShowing())renderShelf();refresh();
     }
     private void openProviderAlbum(Track track){
-        String id=OnlineMusic.providerId(track);if(id.isEmpty())return;
+        openProviderAlbum(OnlineMusic.providerId(track),track.albumId,track.album);
+    }
+    private void openProviderAlbum(String id,String albumId,String albumName){
+        if(id.isEmpty()||albumId.isEmpty())return;
         if("qishui".equals(id)){showMusicSources();return;}
         MusicProvider provider=OnlineMusic.provider(this,id);long epoch=OnlineMusic.sessionGeneration(this,id);
-        LinearLayout body=column();body.addView(note("正在读取“"+track.album+"”的完整曲目…"));Dialog loading=sheet("完整专辑",body,false);
-        io.execute(()->{try{MusicProvider.Album album=provider.album(track.albumId);handler.post(()->{
+        LinearLayout body=column();body.addView(note("正在读取“"+albumName+"”的完整曲目…"));Dialog loading=sheet("完整专辑",body,false);
+        io.execute(()->{try{MusicProvider.Album album=provider.album(albumId);handler.post(()->{
             if(destroyed||!loading.isShowing()||OnlineMusic.sessionGeneration(this,id)!=epoch)return;
             loading.dismiss();rememberProvider(id,album.tracks);
             if(album.tracks.isEmpty())toast("该专辑暂时没有可读取的曲目");else showAlbum(new ArrayList<>(album.tracks));
-        });}catch(ProviderException failure){handler.post(()->{if(!destroyed&&loading.isShowing()){body.removeAllViews();body.addView(note(failure.getMessage()));body.addView(actionButton("重试",()->{loading.dismiss();openProviderAlbum(track);}));}});}});
+        });}catch(ProviderException failure){handler.post(()->{if(!destroyed&&loading.isShowing()){body.removeAllViews();body.addView(note(failure.getMessage()));body.addView(actionButton("重试",()->{loading.dismiss();openProviderAlbum(id,albumId,albumName);}));}});}});
     }
 
     private void showNetease(){showNetease(null,null,null);}
@@ -1002,10 +1131,13 @@ public final class MainActivity extends Activity {
 
     private int blend(int a,int b,float amount){return Color.rgb((int)(Color.red(a)*(1-amount)+Color.red(b)*amount),(int)(Color.green(a)*(1-amount)+Color.green(b)*amount),(int)(Color.blue(a)*(1-amount)+Color.blue(b)*amount));}
     private Dialog sheet(String heading, LinearLayout body, boolean retainStage) {
+        return sheet(heading,body,retainStage,false);
+    }
+    private Dialog sheet(String heading, LinearLayout body, boolean retainStage, boolean albumSurface) {
         Dialog dialog = new Dialog(this); dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout panel = column(); panel.setPadding(dp(22), dp(10), dp(22), dp(20)); panel.setBackground(DesignSystem.pageCard(this,24));
+        LinearLayout panel = column(); panel.setPadding(dp(22), dp(10), dp(22), dp(20)); panel.setBackground(albumSurface ? DesignSystem.settingsCard(this,24) : DesignSystem.pageCard(this,24));
         TextView handle = text("━━━━", 16, 0xffb0a5b6); handle.setGravity(Gravity.CENTER); panel.addView(handle, new LinearLayout.LayoutParams(-1, dp(24)));
-        LinearLayout top = row(); top.setGravity(Gravity.CENTER_VERTICAL); TextView h = text(heading, 21, 0xff302737); h.setTypeface(null, Typeface.BOLD); top.addView(h, new LinearLayout.LayoutParams(0, dp(54), 1)); Button close = quietButton("完成", "关闭面板", dialog::dismiss); top.addView(close); panel.addView(top);
+        LinearLayout top = row(); top.setGravity(Gravity.CENTER_VERTICAL); TextView h = text(heading, 21, albumSurface ? Color.WHITE : 0xff302737); h.setTypeface(null, Typeface.BOLD); top.addView(h, new LinearLayout.LayoutParams(0, dp(54), 1)); Button close = quietButton("完成", "关闭面板", dialog::dismiss); if(albumSurface){close.setTextColor(Color.WHITE);close.setBackground(DesignSystem.ambientButton(this,24));} top.addView(close); panel.addView(top);
         ScrollView scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.setClipToPadding(false); scroll.addView(body, new ScrollView.LayoutParams(-1, -2)); panel.addView(scroll, new LinearLayout.LayoutParams(-1, -2));
         dialog.setContentView(panel); Window window = dialog.getWindow(); if (window != null) { window.setBackgroundDrawableResource(android.R.color.transparent); window.setGravity(Gravity.BOTTOM); window.setDimAmount(retainStage ? 0 : .22f); window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE); }
         trackDialog(dialog); dialog.show(); if (window != null) { window.setLayout(-1, -2); scroll.post(() -> { if (!dialog.isShowing() || destroyed) return; int hPx = getResources().getDisplayMetrics().heightPixels; int max = (int) (hPx * (retainStage ? .49f : .78f)); scroll.getLayoutParams().height = Math.min(Math.max(dp(80), max - dp(115)), measureBody(body, getResources().getDisplayMetrics().widthPixels - dp(44))); scroll.requestLayout(); }); }

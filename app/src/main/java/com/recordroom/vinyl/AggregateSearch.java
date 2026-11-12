@@ -19,6 +19,11 @@ import java.util.function.LongSupplier;
 
 /** Concurrent catalog search. UI snapshots contain no platform-specific labels or failure messages. */
 public final class AggregateSearch implements AutoCloseable {
+    public static final class AlbumResult {
+        public final String providerId;
+        public final MusicProvider.Album album;
+        AlbumResult(String id,MusicProvider.Album album){this.providerId=id;this.album=album;}
+    }
     public interface Listener { void changed(State state); }
     public static final class Result {
         public final String key;
@@ -49,10 +54,14 @@ public final class AggregateSearch implements AutoCloseable {
         public final String query;
         public final List<Result> results;
         public final List<ArtistResult> artists;
+        public final List<AlbumResult> albums;
+        public final boolean albumLoading,albumHasMore;
+        public final int albumFailed;
         public final boolean loading,hasMore,artistLoading,artistHasMore;
         public final int failedCount,skippedCount,artistFailedCount,artistSkippedCount,artistSearchedCount;
         State(String query,List<Result> results,List<ArtistResult> artists,boolean loading,boolean hasMore,int failed,int skipped,
-              boolean artistLoading,boolean artistMore,int artistFailed,int artistSkipped,int artistSearched){
+              boolean artistLoading,boolean artistMore,int artistFailed,int artistSkipped,int artistSearched,List<AlbumResult> albums,boolean albumLoading,boolean albumHasMore,int albumFailed){
+            this.albums=Collections.unmodifiableList(albums);this.albumLoading=albumLoading;this.albumHasMore=albumHasMore;this.albumFailed=albumFailed;
             this.query=query;this.results=Collections.unmodifiableList(results);this.artists=Collections.unmodifiableList(artists);this.loading=loading;this.hasMore=hasMore;failedCount=failed;skippedCount=skipped;
             this.artistLoading=artistLoading;artistHasMore=artistMore;artistFailedCount=artistFailed;artistSkippedCount=artistSkipped;artistSearchedCount=artistSearched;
         }
@@ -63,18 +72,20 @@ public final class AggregateSearch implements AutoCloseable {
     }
     private static final int PAGE_SIZE=25;
     private final ArrayList<Lane> lanes=new ArrayList<>();
-    private final ArrayList<ArtistLane> artistLanes=new ArrayList<>();
+    private final ArrayList<CatalogLane<MusicProvider.Artist>> artistLanes=new ArrayList<>();
+    private final ArrayList<CatalogLane<MusicProvider.Album>> albumLanes=new ArrayList<>();
     private final Handler main=new Handler(Looper.getMainLooper());
     private final ExecutorService workers=Executors.newFixedThreadPool(3,r->{Thread t=new Thread(r,"vinyl-unified-search");t.setDaemon(true);return t;});
     private final ExecutorService artistWorkers=Executors.newFixedThreadPool(3,r->{Thread t=new Thread(r,"vinyl-artist-search");t.setDaemon(true);return t;});
+    private final ExecutorService albumWorkers=Executors.newFixedThreadPool(3,r->{Thread t=new Thread(r,"vinyl-album-search");t.setDaemon(true);return t;});
     private Listener listener;
     private String query="";
     private long generation;
     private boolean closed;
-    private State current=new State("",new ArrayList<>(),new ArrayList<>(),false,false,0,0,false,false,0,0,0);
+    private State current=new State("",new ArrayList<>(),new ArrayList<>(),false,false,0,0,false,false,0,0,0,Collections.emptyList(),false,false,0);
 
     public AggregateSearch(Context context){this(sources(context.getApplicationContext()));}
-    AggregateSearch(List<Source> sources){for(Source source:sources){lanes.add(new Lane(source));artistLanes.add(new ArtistLane(source));}}
+    AggregateSearch(List<Source> sources){for(Source source:sources){lanes.add(new Lane(source));artistLanes.add(new ArtistLane(source));albumLanes.add(new AlbumLane(source));}}
     private static List<Source> sources(Context app){
         ArrayList<Source> result=new ArrayList<>();int index=0;
         for(String id:new String[]{"qq","netease","applemusic"}){
@@ -90,14 +101,16 @@ public final class AggregateSearch implements AutoCloseable {
     public void search(String value){
         if(closed)return;generation++;cancelRequests();query=value==null?"":value.trim();
         for(Lane lane:lanes){lane.tracks.clear();lane.offset=0;lane.more=true;lane.failed=false;lane.skipped=false;lane.epoch=-1;}
-        for(ArtistLane lane:artistLanes){lane.artists.clear();lane.offset=0;lane.more=true;lane.failed=false;lane.skipped=false;lane.epoch=-1;}
+        for(CatalogLane<?> lane:artistLanes)lane.reset();for(CatalogLane<?> lane:albumLanes)lane.reset();
         if(query.isEmpty()){publish();return;}
-        for(Lane lane:lanes)launch(lane);for(ArtistLane lane:artistLanes)launchArtist(lane);publish();
+        for(Lane lane:lanes)launch(lane);for(CatalogLane<MusicProvider.Artist> lane:artistLanes)launchCatalog(lane,artistWorkers);for(CatalogLane<MusicProvider.Album> lane:albumLanes)launchCatalog(lane,albumWorkers);publish();
     }
     public void loadMore(){if(closed||query.isEmpty())return;for(Lane lane:lanes)if(lane.more&&!lane.busy&&!lane.failed&&!lane.skipped)launch(lane);publish();}
     public void retryFailed(){if(closed||query.isEmpty())return;for(Lane lane:lanes)if(lane.failed&&!lane.busy)launch(lane);publish();}
-    public void loadMoreArtists(){if(closed||query.isEmpty())return;for(ArtistLane lane:artistLanes)if(lane.more&&!lane.busy&&!lane.failed&&!lane.skipped)launchArtist(lane);publish();}
-    public void retryArtists(){if(closed||query.isEmpty())return;for(ArtistLane lane:artistLanes)if(lane.failed&&!lane.busy)launchArtist(lane);publish();}
+    public void loadMoreArtists(){if(closed||query.isEmpty())return;for(CatalogLane<MusicProvider.Artist> lane:artistLanes)if(lane.more&&!lane.busy&&!lane.failed&&!lane.skipped)launchCatalog(lane,artistWorkers);publish();}
+    public void retryArtists(){if(closed||query.isEmpty())return;for(CatalogLane<MusicProvider.Artist> lane:artistLanes)if(lane.failed&&!lane.busy)launchCatalog(lane,artistWorkers);publish();}
+    public void loadMoreAlbums(){if(closed||query.isEmpty())return;for(CatalogLane<MusicProvider.Album> lane:albumLanes)if(lane.more&&!lane.busy&&!lane.failed&&!lane.skipped)launchCatalog(lane,albumWorkers);publish();}
+    public void retryAlbums(){if(closed||query.isEmpty())return;for(CatalogLane<MusicProvider.Album> lane:albumLanes)if(lane.failed&&!lane.busy)launchCatalog(lane,albumWorkers);publish();}
     public void refresh(){search(query);}
     private void launch(Lane lane){
         final long token=generation,request=++lane.requestId;final String requested=query;
@@ -124,32 +137,31 @@ public final class AggregateSearch implements AutoCloseable {
         lane.timeout=()->{if(closed||generation!=token||lane.requestId!=request||!lane.busy)return;lane.requestId++;lane.busy=false;lane.failed=true;if(lane.future!=null)lane.future.cancel(true);lane.future=null;lane.timeout=null;publish();};
         main.postDelayed(lane.timeout,15000);
     }
-    private void launchArtist(ArtistLane lane){
+    private <T> void launchCatalog(CatalogLane<T> lane,ExecutorService pool){
         final long token=generation,request=++lane.requestId;final String requested=query;
-        if(lane.epoch>=0&&lane.epoch!=lane.source.epoch.getAsLong()){lane.artists.clear();lane.offset=0;lane.more=true;}
+        if(lane.epoch>=0&&lane.epoch!=lane.source.epoch.getAsLong()){lane.items.clear();lane.offset=0;lane.more=true;}
         final int offset=lane.offset;final long epoch=lane.source.epoch.getAsLong();
         lane.epoch=epoch;lane.busy=true;lane.failed=false;lane.skipped=false;
-        lane.future=artistWorkers.submit(()->{
-            MusicProvider.Page<MusicProvider.Artist> page=null;boolean skipped=false,failed=false;
-            try{if(!lane.source.provider.supportsArtistSearch()||!lane.source.enabled.getAsBoolean())skipped=true;
-                else{page=lane.source.provider.searchArtists(requested,offset,PAGE_SIZE);validateArtists(page,offset);}}
+        lane.future=pool.submit(()->{
+            MusicProvider.Page<T> page=null;boolean skipped=false,failed=false;
+            try{if(!lane.supported()||!lane.source.enabled.getAsBoolean())skipped=true;
+                else{page=lane.find(requested,offset);
+                    if(page==null||page.items.size()>PAGE_SIZE||page.nextOffset<offset||page.hasMore&&(page.items.isEmpty()||page.nextOffset<=offset))throw invalid();
+                    for(T entry:page.items)if(entry==null||blank(lane.id(entry))||blank(lane.name(entry)))throw invalid();}}
             catch(Exception failure){failed=true;}
-            final MusicProvider.Page<MusicProvider.Artist> response=page;final boolean unavailable=skipped,error=failed;
+            final MusicProvider.Page<T> response=page;final boolean unavailable=skipped,error=failed;
             main.post(()->{
                 if(closed||generation!=token||lane.requestId!=request)return;
                 lane.busy=false;lane.future=null;if(lane.timeout!=null)main.removeCallbacks(lane.timeout);lane.timeout=null;
-                if(lane.source.epoch.getAsLong()!=epoch){lane.artists.clear();lane.offset=0;lane.failed=true;publish();return;}
+                if(lane.source.epoch.getAsLong()!=epoch){lane.items.clear();lane.offset=0;lane.failed=true;publish();return;}
                 lane.skipped=unavailable;lane.failed=error;
-                if(!error&&!unavailable){for(MusicProvider.Artist artist:response.items)lane.artists.put(artist.id,artist);lane.offset=response.nextOffset;lane.more=response.hasMore;}
+                if(!error&&!unavailable){for(T entry:response.items)lane.items.put(lane.id(entry),entry);lane.offset=response.nextOffset;lane.more=response.hasMore;}
                 publish();
             });
         });
         lane.timeout=()->{if(closed||generation!=token||lane.requestId!=request||!lane.busy)return;lane.requestId++;lane.busy=false;lane.failed=true;if(lane.future!=null)lane.future.cancel(true);lane.future=null;lane.timeout=null;publish();};main.postDelayed(lane.timeout,15000);
     }
-    private static void validateArtists(MusicProvider.Page<MusicProvider.Artist> page,int offset)throws ProviderException{
-        if(page==null||page.items.size()>PAGE_SIZE||page.nextOffset<offset||page.hasMore&&(page.items.isEmpty()||page.nextOffset<=offset))throw invalid();
-        for(MusicProvider.Artist artist:page.items)if(artist==null||artist.id==null||artist.id.trim().isEmpty()||artist.name==null||artist.name.trim().isEmpty())throw invalid();
-    }
+    private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static void validate(MusicProvider.Page<Track> page,int offset,String provider)throws ProviderException {
         if(page==null||page.items.size()>PAGE_SIZE||page.nextOffset<offset||page.hasMore&&(page.items.isEmpty()||page.nextOffset<=offset))throw invalid();
         for(Track track:page.items)if(track==null||!provider.equals(OnlineMusic.providerId(track))||track.id.isEmpty()||track.uri.isEmpty())throw invalid();
@@ -171,13 +183,21 @@ public final class AggregateSearch implements AutoCloseable {
             results.add(new Result(group.getKey(),tracks));
         }
         ArrayList<ArtistResult> artists=new ArrayList<>();boolean artistLoading=false,artistMore=false;int artistFailed=0,artistSkipped=0,artistSearched=0;
-        for(ArtistLane lane:artistLanes){
-            if(lane.epoch>=0&&lane.epoch!=lane.source.epoch.getAsLong()){lane.artists.clear();if(!lane.busy)lane.failed=true;}
+        for(CatalogLane<MusicProvider.Artist> lane:artistLanes){
+            if(lane.epoch>=0&&lane.epoch!=lane.source.epoch.getAsLong()){lane.items.clear();if(!lane.busy)lane.failed=true;}
             artistLoading|=lane.busy;artistMore|=!query.isEmpty()&&lane.more&&!lane.failed&&!lane.skipped;
             if(lane.failed)artistFailed++;if(lane.skipped)artistSkipped++;if(lane.epoch>=0&&!lane.busy&&!lane.skipped&&!lane.failed)artistSearched++;
-            for(MusicProvider.Artist artist:lane.artists.values())artists.add(new ArtistResult(lane.source.provider.id(),artist));
+            for(MusicProvider.Artist artist:lane.items.values())artists.add(new ArtistResult(lane.source.provider.id(),artist));
         }
-        current=new State(query,results,artists,loading,more,failed,skipped,artistLoading,artistMore,artistFailed,artistSkipped,artistSearched);if(listener!=null&&!closed)listener.changed(current);
+        ArrayList<AlbumResult> albums=new ArrayList<>();boolean albumLoading=false,albumMore=false;int albumFailed=0;
+        for(CatalogLane<MusicProvider.Album> lane:albumLanes){
+            if(lane.epoch>=0&&lane.epoch!=lane.source.epoch.getAsLong()){lane.items.clear();if(!lane.busy)lane.failed=true;}
+            albumLoading|=lane.busy;
+            albumMore|=!query.isEmpty()&&lane.more&&!lane.failed&&!lane.skipped;
+            if(lane.failed)albumFailed++;
+            for(MusicProvider.Album album:lane.items.values())albums.add(new AlbumResult(lane.source.provider.id(),album));
+        }
+        current=new State(query,results,artists,loading,more,failed,skipped,artistLoading,artistMore,artistFailed,artistSkipped,artistSearched,albums,albumLoading,albumMore,albumFailed);if(listener!=null&&!closed)listener.changed(current);
     }
     /** Conservative identity: live/remix titles and different albums remain separate, unknown metadata never merges. */
     static String versionKey(Track track){
@@ -185,13 +205,33 @@ public final class AggregateSearch implements AutoCloseable {
         return norm(track.title)+"\u001f"+norm(track.artist)+"\u001f"+norm(track.album)+"\u001f"+Math.round(track.durationMs/1000d);
     }
     private static String norm(String value){return Normalizer.normalize(value,Normalizer.Form.NFKC).trim().replaceAll("\\s+"," ").toLowerCase(Locale.ROOT);}
-    private void cancelRequests(){for(ArtistLane lane:artistLanes){lane.requestId++;if(lane.future!=null)lane.future.cancel(true);lane.future=null;lane.busy=false;if(lane.timeout!=null)main.removeCallbacks(lane.timeout);lane.timeout=null;}for(Lane lane:lanes){lane.requestId++;if(lane.future!=null)lane.future.cancel(true);lane.future=null;lane.busy=false;if(lane.timeout!=null)main.removeCallbacks(lane.timeout);lane.timeout=null;}}
-    @Override public void close(){if(closed)return;closed=true;generation++;cancelRequests();listener=null;workers.shutdownNow();artistWorkers.shutdownNow();main.removeCallbacksAndMessages(null);}
+    private void cancelRequests(){for(CatalogLane<?> lane:artistLanes)lane.cancel(main);for(CatalogLane<?> lane:albumLanes)lane.cancel(main);for(Lane lane:lanes){lane.requestId++;if(lane.future!=null)lane.future.cancel(true);lane.future=null;lane.busy=false;if(lane.timeout!=null)main.removeCallbacks(lane.timeout);lane.timeout=null;}}
+    @Override public void close(){if(closed)return;closed=true;generation++;cancelRequests();listener=null;workers.shutdownNow();artistWorkers.shutdownNow();albumWorkers.shutdownNow();main.removeCallbacksAndMessages(null);}
     private static final class Candidate {final Track track;final int priority;Candidate(Track track,int priority){this.track=track;this.priority=priority;}}
-    private static final class ArtistLane {
-        final Source source;final LinkedHashMap<String,MusicProvider.Artist> artists=new LinkedHashMap<>();Future<?> future;Runnable timeout;
-        long epoch=-1,requestId;int offset;boolean more=true,busy,failed,skipped;
-        ArtistLane(Source source){this.source=source;}
+    private abstract static class CatalogLane<T> {
+        final Source source;final LinkedHashMap<String,T> items=new LinkedHashMap<>();
+        Future<?> future;Runnable timeout;long epoch=-1,requestId;int offset;boolean more=true,busy,failed,skipped;
+        CatalogLane(Source source){this.source=source;}
+        abstract boolean supported();
+        abstract MusicProvider.Page<T> find(String query,int offset)throws ProviderException;
+        abstract String id(T entry);
+        abstract String name(T entry);
+        void reset(){items.clear();offset=0;more=true;failed=skipped=false;epoch=-1;}
+        void cancel(Handler main){requestId++;if(future!=null)future.cancel(true);future=null;busy=false;if(timeout!=null)main.removeCallbacks(timeout);timeout=null;}
+    }
+    private static final class ArtistLane extends CatalogLane<MusicProvider.Artist> {
+        ArtistLane(Source source){super(source);}
+        boolean supported(){return source.provider.supportsArtistSearch();}
+        MusicProvider.Page<MusicProvider.Artist> find(String q,int offset)throws ProviderException{return source.provider.searchArtists(q,offset,PAGE_SIZE);}
+        String id(MusicProvider.Artist item){return item.id;}
+        String name(MusicProvider.Artist item){return item.name;}
+    }
+    private static final class AlbumLane extends CatalogLane<MusicProvider.Album> {
+        AlbumLane(Source source){super(source);}
+        boolean supported(){return source.provider.supportsAlbumSearch();}
+        MusicProvider.Page<MusicProvider.Album> find(String q,int offset)throws ProviderException{return source.provider.searchAlbums(q,offset,PAGE_SIZE);}
+        String id(MusicProvider.Album item){return item.id;}
+        String name(MusicProvider.Album item){return item.name;}
     }
     private static final class Lane {
         final Source source;final LinkedHashMap<String,Track> tracks=new LinkedHashMap<>();Future<?> future;Runnable timeout;

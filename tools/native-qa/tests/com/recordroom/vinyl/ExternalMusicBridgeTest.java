@@ -33,6 +33,24 @@ public class ExternalMusicBridgeTest {
     }
     @After public void cleanup() { bridge.close(); }
 
+    @Test public void widgetUsesSelectedLinkedTitleAndCoverInsteadOfItsPausedLocalQueue() {
+        FakeSession soda = song(SODA,"current","外部正在播放");
+        access.sessions.add(soda);
+        bridge.disableTimelineTicks();
+        bridge.selectProvider("qishui_music");bridge.start();
+        android.content.Context context = org.robolectric.RuntimeEnvironment.getApplication();
+        Track local = DemoCatalog.load(context).get(0);
+        VinylWidgetProvider.Snapshot snapshot=VinylWidgetProvider.snapshot(context,local,false,true,bridge.getState());
+        assertEquals("外部正在播放",snapshot.title);
+        assertSame(bridge.getState().artwork,snapshot.cover);
+        assertNotNull(snapshot.link);
+        assertNotEquals(local.id,snapshot.current.id);
+        access.permission=false;bridge.refresh();
+        snapshot=VinylWidgetProvider.snapshot(context,local,false,true,bridge.getState());
+        assertEquals("汽水音乐",snapshot.title);
+        assertNull(snapshot.cover);
+    }
+
     @Test public void registryIsClosedAndInvalidSelectionCannotReplaceSource() {
         assertEquals(3, ExternalMusicBridge.providers().size());
         assertEquals(QQ, ExternalMusicBridge.providerForId("qq_music").packageName);

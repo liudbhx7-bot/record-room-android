@@ -45,7 +45,6 @@ public class EmptyPlayerStateTest {
         assertEquals("",field(activity,"shownId"));
         assertNull(field(activity,"currentArtwork"));
         assertNull(field(field(activity,"turntable"),"artwork"));
-        assertNull(field(field(activity,"dockCover"),"artwork"));
     }
 
     @Test public void removingLastSongClearsUiAndRejectsPendingCover()throws Exception {

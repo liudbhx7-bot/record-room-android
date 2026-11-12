@@ -27,6 +27,7 @@ public final class ExternalMusicNotificationListener extends NotificationListene
     @Override public void onListenerConnected() {
         super.onListenerConnected();
         owner=new WeakReference<>(this);connectionChanged(true);
+        VinylWidgetProvider.updateAll(this);
     }
 
     @Override public void onListenerDisconnected() {

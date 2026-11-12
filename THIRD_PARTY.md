@@ -2,6 +2,12 @@
 
 本仓库保留原项目的版权与许可说明。根目录 [COPYING](COPYING) 为 GNU GPL v3 全文；以下第三方组件仍按各自的许可或提供条款使用，项目的 GPL 声明不会重新许可 Apple SDK 或其他第三方资源。
 
+## 本地音频读取
+
+Media3 ExoPlayer 管理播放时钟、队列与 Android 音频输出。新增的本地文件读取器使用 FFmpeg 8.1.3 的 libavformat、libavcodec 和 libavutil。它只打开用户选定的文件描述符，包含 APE、WavPack、AIFF 和无加密 ALAC 的相关解封装与解码部分。该构建关闭网络协议、GPL 和 nonfree 功能。FFmpeg 版权所有归 FFmpeg developers，采用 LGPL-2.1-or-later。[FFmpeg 上游](https://github.com/FFmpeg/FFmpeg) · [Media3 上游](https://github.com/androidx/media) · [随包许可](app/src/main/assets/licenses/FFmpeg-LGPL-2.1.txt)。
+
+发行版中的 ARMv7 / ARM64 动态库均可用公开代码和同版源码重新生成或替换。完整 FFmpeg 源码随发行附件提供。[源码归档](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.0/ffmpeg-8.1.3.tar.xz) · [本地读取器](app/src/main/cpp/local_formats.c) · [构建步骤](docs/BUILDING.md)。
+
 ## Mineradio 协议适配
 
 QQ 音乐与保留的汽水协议 Java 代码参考、移植自：

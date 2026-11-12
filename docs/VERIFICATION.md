@@ -1,11 +1,27 @@
 # 版本验证记录
 
+## 0.8.0 · 本地音频、USB 输出与新版界面
+
+2026-11-12。在 Android 15 / API 35 ARM64 模拟器上，以 0.7.9 安装状态覆盖升级到发行包，三次冷启动通过。版本代码 21，公开源码自动测试 487 项通过。安装包通过 v2/v3 签名和 16 KB ZIP 对齐验证，新解码库的两个 ARM 架构亦检查了 ELF 段对齐。
+
+| 使用发行包实际播放的样本 | 平台反馈与对照 |
+| --- | --- |
+| MP3、AAC/M4A、FLAC 16-bit / 44.1 kHz、FLAC 24-bit / 192 kHz、PCM WAV、Ogg Opus | 使用文件提供器 URI 导入、起播、拖到曲目后段，播放位置继续前进 |
+| AIFF 16-bit / 44.1 kHz 与 24-bit / 192 kHz、WavPack 16-bit / 44.1 kHz 与 32-bit / 192 kHz、ALAC 16-bit / 44.1 kHz 与 24-bit / 192 kHz、APE 16-bit / 44.1 kHz | 同样通过导入、播放与定位。从每个样本的起始及一次非对齐随机读取各取 4096 字节，14 段 PCM 与桌面 FFmpeg 参考解码逐字节一致 |
+
+- 共 13 个文件。24-bit / 192 kHz FLAC 的音质面板显示源文件规格，送入 Android 的流为 192 kHz、32 位浮点 PCM，模拟器硬件端显示「系统未报告」。
+- CUE 使用正常多文件选择的结果入口。7 秒整轨分成 3.2 和 3.8 秒，第一首跳到末段后自动进入第二首，同一 ExoPlayer 实例继续运行。此检查未录制模拟器音频波形。
+- 真实系统 AppWidgetManager 和测试桌面宿主绑定同一组件，切歌后封面和底色随之改变。配置页另测四款预览的切换与封面跟随。
+- USB 模式选择、整数 PCM 转换、部分写入等覆盖了软件测试。OPPO Find N6、物理 USB DAC、蓝牙耳机端的实际位深和采样率，以及私人会员账号播放权益仍待真机验证。
+
+安装包 SHA-256 为 `880d8c9428d22be1e31b3d1f5c94e45698194ea1851f96100469368d47624033`。
+
 ## 0.7.9 · 播放页字标调整
 
 2026-11-12。版本代码 20。公开源码编译后沿用发行签名，安装包通过 v2/v3 验签和 16 KB ZIP 对齐检查。
 
 - 474 项自动测试通过。在 Android 15 ARM64 模拟器上从 0.7.8 覆盖升级，连续三次冷启动通过。
-- 用发行 APK 播放内置音频，验证同专辑切歌、拖动进度、暂停和恢复、跨专辑换色、宽屏播放和工具入口。[琥珀播放页](screenshots/player.png) · [森林播放页](screenshots/player-forest.png) · [宽屏播放页](screenshots/wide-player.png)。
+- 用发行 APK 播放内置音频，验证同专辑切歌、拖动进度、暂停和恢复、跨专辑换色、宽屏播放和工具入口。[琥珀播放页](https://github.com/liudbhx7-bot/record-room-android/blob/v0.7.9/docs/screenshots/player.png) · [森林播放页](https://github.com/liudbhx7-bot/record-room-android/blob/v0.7.9/docs/screenshots/player-forest.png) · [宽屏播放页](https://github.com/liudbhx7-bot/record-room-android/blob/v0.7.9/docs/screenshots/wide-player.png)。
 - 使用本地播放服务依次打开七个约 7 秒的音频样本。MP3 44.1 kHz、AAC-LC/M4A 44.1 kHz、FLAC 16-bit / 44.1 kHz、FLAC 24-bit / 192 kHz、PCM WAV 16-bit / 48 kHz、Ogg Opus 48 kHz 和 ALAC/M4A 16-bit / 44.1 kHz 均返回正确时长，播放位置前进了约 1 至 1.3 秒，播放器无错误。该项检查覆盖进入播放状态和播放进度。
 - 本轮使用模拟器。系统文件选择器对上述各扩展名的可见性、实际音频输出采样率与位深、OPPO Find N6、外接 DAC 和在线会员播放仍待实测。
 

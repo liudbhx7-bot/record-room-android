@@ -80,13 +80,23 @@ public class UiTheme073Test {
         for(String heading:new String[]{"音乐与连接","唱机外观","聆听体验","关于唱片机"})assertNotNull(text(page,heading));
     }
 
-    @Test public void mainHeaderOpensAggregateSearchDirectlyWithNoSourceChooser()throws Exception{
-        startMain();ViewGroup header=(ViewGroup)field(activity,"header");assertEquals(2,header.getChildCount());assertNotNull(described(header,"播放器设置"));View search=described(header,"搜索在线曲库");assertNotNull(search);assertNull(described(header,"音乐来源"));assertNull(field(activity,"sourcesDialog"));
+    @Test public void thumbDrawerOpensAggregateSearchDirectlyWithNoSourceChooser()throws Exception{
+        startMain();
+        View main=activity.getWindow().getDecorView();
+        assertNull(described(main,"搜索在线曲库"));
+        View trigger=described(main,"打开播放工具");
+        assertNotNull(trigger);
+        trigger.performClick();
+        Dialog drawer=(Dialog)field(activity,"toolDrawer");
+        assertTrue(drawer.isShowing());
+        View panel=drawer.getWindow().getDecorView();
+        for(String action:new String[]{"搜索","资料库","队列","歌词","外观","设置","查看音质与输出","更多歌曲操作","收起工具"})assertNotNull(action,described(panel,action));
+        View search=described(panel,"搜索");
         search.performClick();AggregateSearchPage aggregate=(AggregateSearchPage)field(activity,"aggregatePage");assertNotNull(aggregate);assertNull("Search must not insert a platform chooser",field(activity,"sourcesDialog"));Dialog dialog=(Dialog)field(aggregate,"dialog");assertTrue(dialog.isShowing());assertNotNull(text(dialog.getWindow().getDecorView(),"搜索音乐"));assertFalse(((AggregateSearch)field(aggregate,"engine")).state().loading);
     }
 
     @Test public void mainSettingsRoutesFilePickerWidgetModeAndSleepControls()throws Exception{
-        startMain();SettingsPage page=settings();described(page,"导入本地音乐").performClick();ShadowActivity.IntentForResult file=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertNotNull(file);assertEquals(Intent.ACTION_OPEN_DOCUMENT,file.intent.getAction());assertEquals("audio/*",file.intent.getType());
+        startMain();SettingsPage page=settings();described(page,"导入本地音乐").performClick();ShadowActivity.IntentForResult file=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertNotNull(file);assertEquals(Intent.ACTION_OPEN_DOCUMENT,file.intent.getAction());assertEquals("*/*",file.intent.getType());assertTrue(file.intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE,false));
         described(page,"桌面小组件").performClick();Intent widget=Shadows.shadowOf(activity).getNextStartedActivity();assertNotNull(widget);assertEquals(WidgetAppearanceActivity.class.getName(),widget.getComponent().getClassName());
         described(page,"播放模式").performClick();AlertDialog mode=ShadowAlertDialog.getLatestAlertDialog();assertTrue(mode.isShowing());mode.getListView().performItemClick(null,PlayerService.MODE_SHUFFLE,PlayerService.MODE_SHUFFLE);assertEquals(PlayerService.MODE_SHUFFLE,service.getPlayMode());
         described(page,"睡眠定时").performClick();@SuppressWarnings("unchecked")List<Dialog> dialogs=(List<Dialog>)field(activity,"dialogs");Dialog timer=dialogs.get(dialogs.size()-1);View fifteen=text(timer.getWindow().getDecorView(),"15 分钟");assertNotNull(fifteen);fifteen.performClick();assertTrue(service.getSleepRemainingMs()>890000&&service.getSleepRemainingMs()<=900000);

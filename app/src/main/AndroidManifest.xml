@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.recordroom.vinyl" android:versionCode="20" android:versionName="0.7.9">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.recordroom.vinyl" android:versionCode="21" android:versionName="0.8.0">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <queries>
         <package android:name="com.tencent.qqmusic" />
         <package android:name="com.luna.music" />
@@ -28,6 +29,7 @@
             <meta-data android:name="android.service.notification.disabled_filter_types" android:value="1,2,4,8" />
         </service>
         <service android:name=".PlayerService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <receiver android:name=".WidgetLinkControl" android:exported="false" />
         <receiver android:name=".VinylWidgetProvider" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/vinyl_widget_info" />

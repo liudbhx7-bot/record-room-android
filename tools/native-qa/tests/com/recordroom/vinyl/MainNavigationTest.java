@@ -102,11 +102,11 @@ public class MainNavigationTest {
             assertTrue(((ArrayList<?>)get(a,"dialogs")).contains(restored));
             assertTrue(((java.util.Map<?,?>)get(a,"pageRestorers")).containsKey(restored));
             assertEquals(View.INVISIBLE,((View)get(a,"details")).getVisibility());
-            assertFalse((Boolean)get(a,"chromeVisible"));
+            assertFalse(((View)get(a,"toolEntry")).isShown());
             restored.onBackPressed();drain(a);
             assertNull(get(a,"appearanceDialog"));
             assertEquals(View.VISIBLE,((View)get(a,"details")).getVisibility());
-            assertTrue((Boolean)get(a,"chromeVisible"));
+            assertTrue(((View)get(a,"toolEntry")).isShown());
         } finally {c.pause().stop().destroy();}
     }
 

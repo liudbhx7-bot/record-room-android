@@ -26,6 +26,7 @@ public interface MusicProvider {
         int start=Math.min(Math.max(0,offset),values.size()),end=Math.min(values.size(),start+Math.max(1,limit));
         return new Page<>(values.subList(start,end),values.size(),end,end<values.size());
     }
+    default boolean supportsAlbumSearch(){return false;}
     Page<Album> searchAlbums(String query,int offset,int limit) throws ProviderException;
     Album album(String albumId) throws ProviderException;
     Artist artist(String artistId) throws ProviderException;

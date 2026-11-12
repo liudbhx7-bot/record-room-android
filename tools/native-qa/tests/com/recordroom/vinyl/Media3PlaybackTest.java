@@ -101,6 +101,38 @@ public class Media3PlaybackTest {
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));assertFalse(service.isPlaying());assertEquals(paused,service.getPositionMs());
         System.out.println("MEDIA3_REAL_ENGINE local_pcm_duration_ms="+service.getDurationMs()+" seek_pause_passed (JVM audio sink, not device sound)");
     }
+    @Test public void cueTransitionsKeepNativeRendererAndRelativeTimeline() throws Exception {
+        Track master=local();
+        Track first=master.localSegment(1,"First","Artist","Album","Artist","","",0,4500,"");
+        Track second=master.localSegment(2,"Second","Artist","Album","Artist","","",4500,10000,"");
+        service.setPlayMode(PlayerService.MODE_ORDER);
+        service.setQueue(Arrays.asList(first,second),0,true);
+        await(service::isPlaying);
+        ExoPlayer engine=(ExoPlayer)field("player");
+        assertEquals(4500,service.getDurationMs());assertEquals(2,engine.getMediaItemCount());
+        service.seekTo(4300);
+        await(()->service.getIndex()==1);
+        assertSame(engine,field("player"));assertEquals("Second",service.getCurrent().title);
+        assertEquals(5500,service.getDurationMs());
+        assertTrue("New song starts in its own time base",service.getPositionMs()<3000);
+        assertEquals(1,engine.getMediaItemCount());
+        service.pausePlayback();service.seekTo(2300);
+        await(()->service.getPositionMs()==2300);
+    }
+
+    @Test public void localReadAheadReflectsEditAndPlayModeBeforeTransition() throws Exception {
+        Track a=local(), b=local().localSegment(2,"B","Artist","Album","Artist","","",1000,7000,"");
+        Track c=local().localSegment(3,"C","Artist","Album","Artist","","",7000,11000,"");
+        service.setPlayMode(PlayerService.MODE_ORDER);service.setQueue(Arrays.asList(a,b,c),0,true);
+        await(service::isPlaying);ExoPlayer engine=(ExoPlayer)field("player");
+        assertEquals(LibraryStore.identity(b),engine.getMediaItemAt(1).mediaId);
+        service.moveQueueItem(2,1);assertEquals(LibraryStore.identity(c),engine.getMediaItemAt(1).mediaId);
+        service.setPlayMode(PlayerService.MODE_SHUFFLE);assertEquals(1,engine.getMediaItemCount());
+        service.setPlayMode(PlayerService.MODE_ORDER);assertEquals(LibraryStore.identity(c),engine.getMediaItemAt(1).mediaId);
+        service.removeQueueItem(1);assertEquals(LibraryStore.identity(b),engine.getMediaItemAt(1).mediaId);
+        service.removeQueueItem(1);assertEquals(1,engine.getMediaItemCount());
+    }
+
     @Test public void verifiedRemoteFixturePlaysFullDurationAndDoesNotPersistSignedUrl()throws Exception{
         provider(track->resource("full"));service.setQueue(Collections.singletonList(remote(18000)),0,true);service.seekTo(4000);await(service::isPlaying);
         assertTrue(service.isFullDurationVerified());assertEquals(18000,service.getDurationMs());assertTrue(service.getPositionMs()>=4000);

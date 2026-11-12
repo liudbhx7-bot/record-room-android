@@ -60,6 +60,7 @@ public final class AppleMusicProvider implements MusicProvider {
             return new Page<>(artists,page.total,next,!page.next.isEmpty());
         }catch(AppleMusicApi.Failure failure){throw convert(failure);}
     }
+    @Override public boolean supportsAlbumSearch(){return true;}
     @Override public Page<Album> searchAlbums(String query,int offset,int limit)throws ProviderException{
         try{store.prepareDeveloperToken();AppleMusicApi.Page page=api.searchCatalog(storefront(),"albums",query,Math.max(1,Math.min(25,limit)),offset);return albumPage(page,offset);}catch(AppleMusicApi.Failure failure){throw convert(failure);}
     }

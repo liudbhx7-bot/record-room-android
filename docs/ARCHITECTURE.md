@@ -46,3 +46,9 @@ Java 源码目录：[`app/src/main/java/com/recordroom/vinyl`](../app/src/main/j
 [构建步骤](BUILDING.md) · [验证范围](VERIFICATION.md) · [贡献说明](../CONTRIBUTING.md)。
 
 这是手动 Android 构建工程，目前不是 Gradle/Android Studio 一键项目。请使用仓库脚本和固定依赖清单，不要把缓存目录当依赖来源。
+
+## 本地高解析读入与输出
+
+普通格式沿用 Media3 数据源。本地选择的 APE、WavPack、AIFF 和未加密 ALAC 由 `LocalFormatDataSource` 与 `local_formats.c` 通过获授权的文件描述符读取，按需生成可定位的 PCM 数据；非可定位的特殊格式文件提供器会暂存压缩输入。`LocalCueImport` 匹配同批选中的音频并生成稳定分轨 ID，播放时沿用原音频 URI 和片段边界。
+
+`PlaybackAudioPath` 分开保存当前/预读曲目的音源信息，从实际 AudioTrack 查询提交的流规格及已路由设备。兼容 USB 路由上，`UsbPcmOutput` 对需要改变容器位深的 PCM 样本进行数值转换。跨应用联动和 MusicKit 由各自的播放器送出音频。
