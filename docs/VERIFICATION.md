@@ -6,7 +6,8 @@
 
 - 474 项自动测试通过。在 Android 15 ARM64 模拟器上从 0.7.8 覆盖升级，连续三次冷启动通过。
 - 用发行 APK 播放内置音频，验证同专辑切歌、拖动进度、暂停和恢复、跨专辑换色、宽屏播放和工具入口。[琥珀播放页](screenshots/player.png) · [森林播放页](screenshots/player-forest.png) · [宽屏播放页](screenshots/wide-player.png)。
-- 本轮使用模拟器，OPPO Find N6 真机、外接 DAC 和在线会员播放未实测。
+- 使用本地播放服务依次打开七个约 7 秒的音频样本。MP3 44.1 kHz、AAC-LC/M4A 44.1 kHz、FLAC 16-bit / 44.1 kHz、FLAC 24-bit / 192 kHz、PCM WAV 16-bit / 48 kHz、Ogg Opus 48 kHz 和 ALAC/M4A 16-bit / 44.1 kHz 均返回正确时长，播放位置前进了约 1 至 1.3 秒，播放器无错误。该项检查覆盖进入播放状态和播放进度。
+- 本轮使用模拟器。系统文件选择器对上述各扩展名的可见性、实际音频输出采样率与位深、OPPO Find N6、外接 DAC 和在线会员播放仍待实测。
 
 安装包 SHA-256 为 `80dae198628f59973ba4e721be4138653d73360753a6a496ad2d32aacd4f98ea`。
 
