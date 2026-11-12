@@ -4,34 +4,42 @@
 
 把喜欢的音乐，放回唱片上。
 
-Android 原生黑胶播放器 · 封面配色 · 竖立专辑架 · 音乐人主页
+Android · iPhone · Mac　／　封面配色与原石墨唱针
 
-**0.8.1 预览版** · Android 8.0+ · ARM / ARM64
+**0.8.2 预览版** · Android 8.0+ · iOS 17+ 原生工程 · macOS 14+
 
-[**下载 Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.1/Record-Room-0.8.1-Android.apk) · [版本说明](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.1) · [使用指南](docs/USER_GUIDE.md) · [常见问题](docs/FAQ.md)
+[**Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Android.apk) · [**iPhone 主屏幕播放器**](https://liudbhx7-bot.github.io/record-room-android/) · [**Mac 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-macOS.dmg) · [Apple 原生版安装说明](docs/APPLE.md)
 
 </div>
 
-Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音乐播放器。导入自己的音频，搜索歌曲与音乐人，翻开一张专辑，或者连接正在播放的官方音乐 App，让音乐以唱片的方式呈现。
+Record Room 把当前专辑放在唱机后槽，播放时唱针落到唱片上。Android、普通 iPhone 和 Mac 都能导入自己的音乐，按专辑浏览和播放。iPhone 另提供可从 Safari 添加到主屏幕的离线播放器。
 
 「浮光 01」是默认唱机，直接随应用升级提供，无需购买。当前专辑的封套插在机身后方，盘心呈现同一张封面，左下盘缘透出随封面变化的光。盘面、底灯、背景和页面随当前封面配色；立体封套可以滑动选片、打开并抽出唱片。点曲名旁的「⋯」即可展开操作抽屉；搜索首页从最近听过的专辑封套开始。
 
-> **当前状态：公开预览版。** QQ 私人账号的 VIP 全曲播放尚未确认修复；Apple Music 需要自行配置开发者令牌；OPPO Find N6 / ColorOS 真机及长时间后台表现仍待验证。完整范围见[验证记录](docs/VERIFICATION.md)。
+> **在线服务按平台提供。** Apple 平台的能力见[安装与功能表](docs/APPLE.md)。Android 的 QQ 私人账号的 VIP 全曲播放尚未确认修复；Apple Music 需要自行配置开发者令牌；OPPO Find N6 / ColorOS 真机及长时间后台表现仍待验证。完整范围见[验证记录](docs/VERIFICATION.md)。
 
 ## 立即下载
 
 | 内容 | 入口 |
 | --- | --- |
-| Android 安装包 | [Record-Room-0.8.1-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.1/Record-Room-0.8.1-Android.apk) |
-| 版本说明与校验文件 | [v0.8.1 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.1) |
-| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.1) |
+| Android 安装包 | [Record-Room-0.8.2-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Android.apk) |
+| iPhone 主屏幕版 | [用 Safari 打开，再添加到主屏幕](https://liudbhx7-bot.github.io/record-room-android/) |
+| macOS 原生版 | [下载通用 DMG](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-macOS.dmg) |
+| iPhone 原生开发安装 | [Xcode 工程和共享素材](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Apple-Project.zip) · [真机签名步骤](docs/APPLE.md) |
+| 版本说明与校验文件 | [v0.8.2 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.2) |
+| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.2) |
 | 问题反馈 | [提交问题](https://github.com/liudbhx7-bot/record-room-android/issues/new/choose) |
 
-下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.8.1`，版本代码为 `22`。
+下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.8.2`，版本代码为 `23`。
 
 相同签名的旧版本可覆盖安装。自行编译的安装包使用自己的签名，通常不能直接覆盖本项目发布的 APK，详见[安装与更新](docs/USER_GUIDE.md#安装与更新)。当前没有应用内自动更新功能，请从 Release 下载更新。
 
 ## 界面预览
+
+| iPhone 原生播放 | iPhone 来源 A | Android 来源 A |
+| --- | --- | --- |
+| <img src="docs/screenshots/iphone-player-082.jpg" width="220" alt="iPhone 原生唱机"> | <img src="docs/screenshots/iphone-sources-082.jpg" width="220" alt="iPhone 封面目录"> | <img src="docs/screenshots/android-sources-082.jpg" width="220" alt="Android 封面目录"> |
+
 
 播放工具截图取自 0.8.1。搜索首页和桌面小组件截图取自 0.8.0。三张均为 Android 15 模拟器实拍。
 
@@ -65,7 +73,7 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 </details>
 
-## 核心功能
+## Android 核心功能
 
 | 功能 | 可以做什么 |
 | --- | --- |
@@ -103,7 +111,12 @@ Record Room 是一款围绕唱片、唱针和完整专辑设计的 Android 音�
 
 [阅读完整使用指南 →](docs/USER_GUIDE.md)
 
-## 0.8.1 更新
+## 0.8.2 更新
+
+- 音乐来源采用 A「封面目录」，当前唱片封面和机身配色一起更新。
+- 普通 iPhone、Mac 原生播放器及 Safari 主屏幕播放器加入发布包。各平台入口与能力列在 [Apple 安装指南](docs/APPLE.md)。
+
+### 0.8.1 更新
 
 - 曲名右侧的「⋯」打开播放工具。后槽里的专辑封面按原图比例完整显示，横图和竖图都能保留四边。
 - 网易云曲库可按歌曲编号读取歌词。网易云官方 App 联动也支持歌词，有时间信息时会随播放进度高亮。

@@ -219,7 +219,7 @@ public final class MainActivity extends Activity {
             case "playlist_draft":if(activeDraft==null)activeDraft=PlaylistDraftDialog.restore(this,collections,library,b.getBundle("draft"),this::playlistSaved);restored=registerDraft(activeDraft);break;
             case "appearance":showAppearance();restored=appearanceDialog;break;
             case "settings":showSettings();restored=settingsDialog;break;
-            case "sources":showMusicSources();restored=sourcesDialog;break;
+            case "sources":showMusicSources();sourcesPage.showSection(b.getString("section","catalogue"));restored=sourcesDialog;break;
             case "provider":showProvider(b.getString("provider_id","qq"),b.getBundle("panel"));break;
             case "netease":showNetease(b.getBundle("panel"),null,null);restored=neteaseDialog;break;
             case "artist":try{
@@ -230,7 +230,7 @@ public final class MainActivity extends Activity {
         }
         if(restored!=null&&restored.getWindow()!=null)ViewScrollState.restore(restored.getWindow().getDecorView(),b.getBundle("scroll"));
     }
-    @Override public void onResume() { super.onResume(); foreground = true;if(player!=null)player.addListener(listener);externalMusic.start(); if (turntable != null) turntable.setActive(fullPages == 0); refresh();resumeLyricsTick();scheduleChromeHide(); }
+    @Override public void onResume() { super.onResume(); foreground = true;if(player!=null)player.addListener(listener);externalMusic.start(); if (turntable != null) turntable.setActive(fullPages == 0); refresh();resumeLyricsTick();readAppleSourceConfiguration();scheduleChromeHide(); }
     @Override public void onPause() { foreground = false;pauseLyricsTick();needleSound.cancelPending();if(player!=null)player.removeListener(listener);handler.removeCallbacks(hideChrome);externalMusic.stop(); if (turntable != null) turntable.setActive(false); super.onPause(); }
     @Override public void onConfigurationChanged(Configuration configuration) {
         super.onConfigurationChanged(configuration);
@@ -570,6 +570,7 @@ public final class MainActivity extends Activity {
         ArtistPage.refreshTheme(artistPage);
         if(aggregatePage!=null)aggregatePage.refreshTheme();
         styleAmbientWindow(settingsDialog);styleAmbientWindow(sourcesDialog);
+        updateSourceCover();
         for(ProviderLibraryPage page:providerPages.values())page.refreshTheme();
         for(NeteasePage page:neteasePages.values())page.refreshTheme();
         if(settingsPage!=null){Track current=player==null?null:player.getCurrent();settingsPage.update(currentArtwork,usingExternal()?externalMusic.getState().title:current==null?"":current.title,usingExternal()?externalMusic.getState().artist:current==null?"":current.artist);}
@@ -1010,6 +1011,23 @@ public final class MainActivity extends Activity {
         themes.coverPalette(paletteKey,AlbumPalette.from(artwork));
         applyAppearance(true);
     }
+    private void updateSourceCover(){
+        if(sourcesPage==null||sourcesDialog==null||!sourcesDialog.isShowing())return;
+        String id=player==null?"":OnlineMusic.providerId(player.getCurrent());
+        String name="netease".equals(id)||"qq".equals(id)||"applemusic".equals(id)?providerName(id):"";
+        sourcesPage.setPlayback(currentArtwork,name);
+    }
+    private void readAppleSourceConfiguration(){
+        MusicSourcesPage page=sourcesPage;
+        if(page==null||sourcesDialog==null||!sourcesDialog.isShowing())return;
+        io.execute(()->{
+            AppleMusicSessionStore store=new AppleMusicSessionStore(this);
+            boolean configured=!store.tokenServiceUrl().isEmpty()||store.getDeveloperToken()!=null;
+            try{configured|=AppleMusicConfig.load(this).hasTokenService();}catch(AppleMusicApi.Failure ignored){}
+            final boolean needed=!configured;
+            handler.post(()->{if(!destroyed&&page==sourcesPage)page.appleNeedsConfiguration(needed);});
+        });
+    }
     private void showMusicSources(){
         if(sourcesDialog!=null&&sourcesDialog.isShowing()){sourcesPage.update(externalMusic.getState());return;}
         final Dialog[] owned=new Dialog[1];
@@ -1017,17 +1035,21 @@ public final class MainActivity extends Activity {
             public void back(){if(owned[0]!=null)owned[0].dismiss();}
             public void local(){useInternalSource();if(owned[0]!=null)owned[0].dismiss();returnToPlayer();}
             public void netease(){showNetease();}
+            public void importAudio(){pickAudio();}
             public void direct(String id){showProvider(id,null);}
             public void authorize(){try{startActivity(ExternalMusicBridge.notificationAccessSettingsIntent());}catch(android.content.ActivityNotFoundException unavailable){toast("请在系统设置中打开唱片机的通知使用权");}}
             public void select(String id){selectExternalSource(id);}
             public void open(String id){openOfficial(id);}
         });
-        sourcesPage=page;page.update(externalMusic.getState());sourcesDialog=fullPage(page,false);styleAmbientWindow(sourcesDialog);owned[0]=sourcesDialog;pageSnapshots.put(sourcesDialog,()->pageState("sources"));
+        sourcesPage=page;page.update(externalMusic.getState());sourcesDialog=fullPage(page,false);styleAmbientWindow(sourcesDialog);owned[0]=sourcesDialog;
+        ((PageDialog)sourcesDialog).setReturnAction(page::goBack);
+        pageSnapshots.put(sourcesDialog,()->{Bundle state=pageState("sources");state.putString("section",page.section());return state;});
+        updateSourceCover();readAppleSourceConfiguration();
     }
     private void openOfficial(String id){
         Intent launch=externalMusic.getLaunchIntent(id);
         if(launch!=null){try{startActivity(launch);return;}catch(android.content.ActivityNotFoundException|SecurityException unavailable){}}
-        String website="apple_music".equals(id)?"https://www.apple.com/apple-music/":"qishui_music".equals(id)?"https://www.qishui.com/":"https://y.qq.com/";
+        String website="apple_music".equals(id)?"https://www.apple.com/apple-music/":"qishui_music".equals(id)?"https://www.qishui.com/":"netease_music".equals(id)?"https://music.163.com/":"https://y.qq.com/";
         try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(website)));}catch(android.content.ActivityNotFoundException unavailable){toast("请先安装对应的官方音乐 App");}
     }
     private void showExternalQueue(){

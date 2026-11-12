@@ -103,7 +103,7 @@ public class UiTheme073Test {
         described(page,"桌面小组件").performClick();Intent widget=Shadows.shadowOf(activity).getNextStartedActivity();assertNotNull(widget);assertEquals(WidgetAppearanceActivity.class.getName(),widget.getComponent().getClassName());
         described(page,"播放模式").performClick();AlertDialog mode=ShadowAlertDialog.getLatestAlertDialog();assertTrue(mode.isShowing());mode.getListView().performItemClick(null,PlayerService.MODE_SHUFFLE,PlayerService.MODE_SHUFFLE);assertEquals(PlayerService.MODE_SHUFFLE,service.getPlayMode());
         described(page,"睡眠定时").performClick();@SuppressWarnings("unchecked")List<Dialog> dialogs=(List<Dialog>)field(activity,"dialogs");Dialog timer=dialogs.get(dialogs.size()-1);View fifteen=text(timer.getWindow().getDecorView(),"15 分钟");assertNotNull(fifteen);fifteen.performClick();assertTrue(service.getSleepRemainingMs()>890000&&service.getSleepRemainingMs()<=900000);
-        described(page,"音乐账户与联动").performClick();Dialog sources=(Dialog)field(activity,"sourcesDialog");assertNotNull(sources);assertTrue(sources.isShowing());assertNotNull(text(sources.getWindow().getDecorView(),"汽水音乐"));
+        described(page,"音乐账户与联动").performClick();Dialog sources=(Dialog)field(activity,"sourcesDialog");assertNotNull(sources);assertTrue(sources.isShowing());described(sources.getWindow().getDecorView(),"官方 App 联动").performClick();assertNotNull(text(sources.getWindow().getDecorView(),"汽水音乐"));
     }
 
     @Test public void liveCoverThemeUpdatesOpenSettingsAndSearchWithoutRebuildOrScrollLoss()throws Exception{

@@ -1,0 +1,57 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 77;
+ objects = {
+  B31A79490C4D109BE405E110 = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "forest-1.wav"; path = "../app/src/main/assets/demo/forest-1.wav"; sourceTree = SOURCE_ROOT; };
+  AF6AB20D29130A9B5FE4BED9 = { isa = PBXBuildFile; fileRef = B31A79490C4D109BE405E110; };
+  38EEE5E0232AEE052682318F = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "forest-2.wav"; path = "../app/src/main/assets/demo/forest-2.wav"; sourceTree = SOURCE_ROOT; };
+  2802A3A600438E2C9528A394 = { isa = PBXBuildFile; fileRef = 38EEE5E0232AEE052682318F; };
+  6B4AD361E68AFEE117C0E22B = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "forest-3.wav"; path = "../app/src/main/assets/demo/forest-3.wav"; sourceTree = SOURCE_ROOT; };
+  A1B2142209AC80C3FC43A811 = { isa = PBXBuildFile; fileRef = 6B4AD361E68AFEE117C0E22B; };
+  3B510940558CA17750EE9885 = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "night-1.wav"; path = "../app/src/main/assets/demo/night-1.wav"; sourceTree = SOURCE_ROOT; };
+  8C402AEEC1A5FCA446889038 = { isa = PBXBuildFile; fileRef = 3B510940558CA17750EE9885; };
+  ADD4090F3B16BE8DE34C944E = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "night-2.wav"; path = "../app/src/main/assets/demo/night-2.wav"; sourceTree = SOURCE_ROOT; };
+  C9716AD80A8C6381C896107E = { isa = PBXBuildFile; fileRef = ADD4090F3B16BE8DE34C944E; };
+  AE22F119BEF38AF2D385E42A = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "night-3.wav"; path = "../app/src/main/assets/demo/night-3.wav"; sourceTree = SOURCE_ROOT; };
+  9450FA6D844F927C739951D5 = { isa = PBXBuildFile; fileRef = AE22F119BEF38AF2D385E42A; };
+  98B6E9820287C17DE36F518C = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "sun-1.wav"; path = "../app/src/main/assets/demo/sun-1.wav"; sourceTree = SOURCE_ROOT; };
+  70FF43D29B927320762C6C9D = { isa = PBXBuildFile; fileRef = 98B6E9820287C17DE36F518C; };
+  F9125266954918CFD5EBE5B2 = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "sun-2.wav"; path = "../app/src/main/assets/demo/sun-2.wav"; sourceTree = SOURCE_ROOT; };
+  2F18CF42D0ED94AB4B7A6A99 = { isa = PBXBuildFile; fileRef = F9125266954918CFD5EBE5B2; };
+  BF5CA9A70E1565F32EC1DB79 = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "sun-3.wav"; path = "../app/src/main/assets/demo/sun-3.wav"; sourceTree = SOURCE_ROOT; };
+  7C854623B5C5170E909DEF56 = { isa = PBXBuildFile; fileRef = BF5CA9A70E1565F32EC1DB79; };
+  B9A0B762E110EE078E201A27 = { isa = PBXFileReference; lastKnownFileType = image.png; name = "forest-v2.png"; path = "../app/src/main/assets/demo/forest-v2.png"; sourceTree = SOURCE_ROOT; };
+  C5EC04CA2A6B0A9D8ED53634 = { isa = PBXBuildFile; fileRef = B9A0B762E110EE078E201A27; };
+  9D8F61D35967E958DEAE27C3 = { isa = PBXFileReference; lastKnownFileType = image.png; name = "night-v2.png"; path = "../app/src/main/assets/demo/night-v2.png"; sourceTree = SOURCE_ROOT; };
+  FEB2B82EB1C6406ABF5E15F8 = { isa = PBXBuildFile; fileRef = 9D8F61D35967E958DEAE27C3; };
+  31D741A5C235D54C4C22FB78 = { isa = PBXFileReference; lastKnownFileType = image.png; name = "sun-v2.png"; path = "../app/src/main/assets/demo/sun-v2.png"; sourceTree = SOURCE_ROOT; };
+  54C63208AC18D2BB3BE9A935 = { isa = PBXBuildFile; fileRef = 31D741A5C235D54C4C22FB78; };
+  EFB40728F97CFAC4767A2A0C = { isa = PBXFileReference; lastKnownFileType = text.json; name = "catalog.json"; path = "../app/src/main/assets/demo/catalog.json"; sourceTree = SOURCE_ROOT; };
+  420A5637C4EE4D569C0816D0 = { isa = PBXBuildFile; fileRef = EFB40728F97CFAC4767A2A0C; };
+  1D4CD754773AA3E39D2243F7 = { isa = PBXFileReference; lastKnownFileType = image.png; name = "tonearm-graphite-v1.png"; path = "../app/src/main/assets/design/tonearm-graphite-v1.png"; sourceTree = SOURCE_ROOT; };
+  FBC5DA2CF929FD679B578059 = { isa = PBXBuildFile; fileRef = 1D4CD754773AA3E39D2243F7; };
+  BC9948B94AA94706DBE4CF1B = { isa = PBXFileReference; lastKnownFileType = image.png; name = "disc-smoke-lilac-v1.png"; path = "../app/src/main/assets/design/disc-smoke-lilac-v1.png"; sourceTree = SOURCE_ROOT; };
+  9D806C0B712978DC7724F889 = { isa = PBXBuildFile; fileRef = BC9948B94AA94706DBE4CF1B; };
+  E711BEC34E4023D7FB2B4B38 = { isa = PBXFileReference; lastKnownFileType = audio.wav; name = "needle.wav"; path = "../app/src/main/res/raw/needle.wav"; sourceTree = SOURCE_ROOT; };
+  B693D42F7E06C1CAFCBAA34E = { isa = PBXBuildFile; fileRef = E711BEC34E4023D7FB2B4B38; };
+  878A52FC5FF6A57D50B7B870 = { isa = PBXFileSystemSynchronizedRootGroup; path = RecordRoom; sourceTree = "<group>"; };
+  D3CEC99112255DB9BF4963F7 = { isa = PBXGroup; children = (B31A79490C4D109BE405E110,38EEE5E0232AEE052682318F,6B4AD361E68AFEE117C0E22B,3B510940558CA17750EE9885,ADD4090F3B16BE8DE34C944E,AE22F119BEF38AF2D385E42A,98B6E9820287C17DE36F518C,F9125266954918CFD5EBE5B2,BF5CA9A70E1565F32EC1DB79,B9A0B762E110EE078E201A27,9D8F61D35967E958DEAE27C3,31D741A5C235D54C4C22FB78,EFB40728F97CFAC4767A2A0C,1D4CD754773AA3E39D2243F7,BC9948B94AA94706DBE4CF1B,E711BEC34E4023D7FB2B4B38); name = "Shared artwork and audio"; sourceTree = "<group>"; };
+  0D6E4079E36703EBD37C0072 = { isa = PBXGroup; children = (878A52FC5FF6A57D50B7B870,D3CEC99112255DB9BF4963F7,0A3E27B8CA818264D75C8D81); sourceTree = "<group>"; };
+  0A3E27B8CA818264D75C8D81 = { isa = PBXGroup; children = (A8792157CB4F27FB949C035F); name = Products; sourceTree = "<group>"; };
+  A8792157CB4F27FB949C035F = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecordRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+  EBA8DCD606BD0014B899E362 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  41D311A605520FC7B8B9A980 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (AF6AB20D29130A9B5FE4BED9,2802A3A600438E2C9528A394,A1B2142209AC80C3FC43A811,8C402AEEC1A5FCA446889038,C9716AD80A8C6381C896107E,9450FA6D844F927C739951D5,70FF43D29B927320762C6C9D,2F18CF42D0ED94AB4B7A6A99,7C854623B5C5170E909DEF56,C5EC04CA2A6B0A9D8ED53634,FEB2B82EB1C6406ABF5E15F8,54C63208AC18D2BB3BE9A935,420A5637C4EE4D569C0816D0,FBC5DA2CF929FD679B578059,9D806C0B712978DC7724F889,B693D42F7E06C1CAFCBAA34E); runOnlyForDeploymentPostprocessing = 0; };
+  E2AA269EB967A8853A258BFA = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  34A04005BCAF206EEC990BD9 = { isa = PBXNativeTarget; buildConfigurationList = 28A8BB66987DD87BDA946B2E; buildPhases = (EBA8DCD606BD0014B899E362,E2AA269EB967A8853A258BFA,41D311A605520FC7B8B9A980); buildRules = (); dependencies = (); fileSystemSynchronizedGroups = (878A52FC5FF6A57D50B7B870); name = RecordRoom; productName = RecordRoom; productReference = A8792157CB4F27FB949C035F; productType = "com.apple.product-type.application"; };
+  E73C023A2E8E90349BB4D853 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 2720; }; buildConfigurationList = 7C136E16D059730D4C278DBD; compatibilityVersion = "Xcode 16.0"; developmentRegion = "zh-Hans"; knownRegions = ("zh-Hans",en,Base); mainGroup = 0D6E4079E36703EBD37C0072; productRefGroup = 0A3E27B8CA818264D75C8D81; projectDirPath = ""; projectRoot = ""; targets = (34A04005BCAF206EEC990BD9); };
+  28A8BB66987DD87BDA946B2E = { isa = XCConfigurationList; buildConfigurations = (6C7EFF6369083C8E1F2B1994,DD75E2CB1C510A828AC72D96); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+  6C7EFF6369083C8E1F2B1994 = { isa = XCBuildConfiguration; buildSettings = { "PRODUCT_BUNDLE_IDENTIFIER" = "com.liudbhx7.recordroom"; "PRODUCT_NAME" = "RecordRoom"; "SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator macosx"; "SDKROOT" = "auto"; "IPHONEOS_DEPLOYMENT_TARGET" = "17.0"; "MACOSX_DEPLOYMENT_TARGET" = "14.0"; "TARGETED_DEVICE_FAMILY" = "1,2"; "SUPPORTS_MACCATALYST" = "NO"; "GENERATE_INFOPLIST_FILE" = "NO"; "INFOPLIST_FILE" = "RecordRoom-Info.plist"; "CODE_SIGN_STYLE" = "Automatic"; "ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon"; "CURRENT_PROJECT_VERSION" = "23"; "MARKETING_VERSION" = "0.8.2"; "COMBINE_HIDPI_IMAGES" = "YES"; "ENABLE_HARDENED_RUNTIME" = "YES"; "LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks"; "LD_RUNPATH_SEARCH_PATHS[sdk=iphone*]" = "$(inherited) @executable_path/Frameworks"; }; name = Debug; };
+  DD75E2CB1C510A828AC72D96 = { isa = XCBuildConfiguration; buildSettings = { "PRODUCT_BUNDLE_IDENTIFIER" = "com.liudbhx7.recordroom"; "PRODUCT_NAME" = "RecordRoom"; "SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator macosx"; "SDKROOT" = "auto"; "IPHONEOS_DEPLOYMENT_TARGET" = "17.0"; "MACOSX_DEPLOYMENT_TARGET" = "14.0"; "TARGETED_DEVICE_FAMILY" = "1,2"; "SUPPORTS_MACCATALYST" = "NO"; "GENERATE_INFOPLIST_FILE" = "NO"; "INFOPLIST_FILE" = "RecordRoom-Info.plist"; "CODE_SIGN_STYLE" = "Automatic"; "ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon"; "CURRENT_PROJECT_VERSION" = "23"; "MARKETING_VERSION" = "0.8.2"; "COMBINE_HIDPI_IMAGES" = "YES"; "ENABLE_HARDENED_RUNTIME" = "YES"; "LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks"; "LD_RUNPATH_SEARCH_PATHS[sdk=iphone*]" = "$(inherited) @executable_path/Frameworks"; }; name = Release; };
+  7C136E16D059730D4C278DBD = { isa = XCConfigurationList; buildConfigurations = (DFC1D21D28438E531F817435,A1E97C491A309D8FE8E303CF); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+  DFC1D21D28438E531F817435 = { isa = XCBuildConfiguration; buildSettings = { "ENABLE_USER_SCRIPT_SANDBOXING" = "YES"; "CLANG_ENABLE_MODULES" = "YES"; "SWIFT_VERSION" = "5.0"; "SWIFT_OPTIMIZATION_LEVEL" = "-Onone"; "SWIFT_COMPILATION_MODE" = "incremental"; "DEBUG_INFORMATION_FORMAT" = "dwarf"; }; name = Debug; };
+  A1E97C491A309D8FE8E303CF = { isa = XCBuildConfiguration; buildSettings = { "ENABLE_USER_SCRIPT_SANDBOXING" = "YES"; "CLANG_ENABLE_MODULES" = "YES"; "SWIFT_VERSION" = "5.0"; "SWIFT_OPTIMIZATION_LEVEL" = "-O"; "SWIFT_COMPILATION_MODE" = "wholemodule"; "DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym"; }; name = Release; };
+ };
+ rootObject = E73C023A2E8E90349BB4D853;
+}

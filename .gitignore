@@ -21,3 +21,6 @@
 hs_err_*.log
 *.dmp
 .DS_Store
+
+**/xcuserdata/
+**/*.xcuserstate

@@ -40,3 +40,5 @@ QQ 音乐与保留的汽水协议 Java 代码参考、移植自：
 这些资源曾由上面的 Mineradio 提交引入；厂商安全运行时保留原权属，React / ReactDOM 保留其原通知，不被项目 GPL 声明重新许可。省略文件及原始 SHA-256 记录在 [excluded-legacy-assets.json](docs/excluded-legacy-assets.json)，保留的 Java 协议和隔离测试用于来源追溯与边界回归，不代表启用了账号直连。
 
 现有 0.7.7 Release APK 按原始已验证文件发布；公开源码自签构建因签名不同且不再打包这些停用资源，不承诺与该 APK 字节相同。构建步骤见 [BUILDING.md](docs/BUILDING.md)。
+
+网页播放器采用 jsmediatags 3.9.7 在设备上解析用户选择的音频标签。随附 [BSD 许可](web-player/vendor/jsmediatags-license.txt)。

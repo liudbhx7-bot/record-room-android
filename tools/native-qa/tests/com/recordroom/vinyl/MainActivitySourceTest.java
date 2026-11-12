@@ -279,7 +279,9 @@ public class MainActivitySourceTest {
         long time=SystemClock.uptimeMillis();float x=px-(float)Math.sin(Math.toRadians(23))*length,y=py+(float)Math.cos(Math.toRadians(23))*length;
         touch(view,time,0,px,py+length);touch(view,time,2,x,y);touch(view,time,1,x,y);
         assertTrue(session.commands.isEmpty());
-        Dialog dialog=(Dialog)main("sourcesDialog");findText(dialog.getWindow().getDecorView(),"切回资料库").performClick();
+        Dialog dialog=(Dialog)main("sourcesDialog");dialog.onBackPressed();
+        findText(dialog.getWindow().getDecorView(),"手机音乐").performClick();
+        findText(dialog.getWindow().getDecorView(),"切回资料库").performClick();
         assertEquals("",bridge.getSelectedProviderId());assertFalse(activity.getPreferences(0).contains("external_music_source"));
         assertEquals(Arrays.asList("pause"),session.commands);
         assertTrue(((View)main("seek")).isEnabled());assertTrue(((View)main("play")).isEnabled());assertEquals(true,field(view,"needleSeekingEnabled"));
@@ -320,14 +322,14 @@ public class MainActivitySourceTest {
         access.permission=false;access.installed=false;access.sessions.clear();bridge.refresh();call("showMusicSources");
         MusicSourcesPage page=(MusicSourcesPage)main("sourcesPage");Dialog dialog=(Dialog)main("sourcesDialog");
         View decor=dialog.getWindow().getDecorView();layout(decor,412,860);Shadows.shadowOf(Looper.getMainLooper()).idle();layout(decor,412,860);
-        assertNotNull(findText(page,"账号与在线曲库"));
+        assertNotNull(findText(page,"账号与曲库"));
         assertNotNull(findText(page,"QQ 音乐 · 账号与曲库"));assertNull(findText(page,"汽水音乐 · 账号与曲库"));
         assertNotNull(findText(page,"Apple Music · 账号与曲库"));
-        assertNotNull(findText(page,"可选 · 官方 App 联动"));assertNotNull(findText(page,"先开启播放联动权限"));
+        assertNull(findText(page,"先开启播放联动权限"));findText(page,"官方 App 联动").performClick();assertNotNull(findText(page,"先开启播放联动权限"));
         @SuppressWarnings("unchecked") Map<String,Button> choose=(Map<String,Button>)field(page,"choose");
         for(Button button:choose.values())assertFalse(button.isEnabled());
         assertNotNull(findText(page,"未检测到QQ音乐，请先安装官方 App"));assertFalse(bridge.getState().connected);
-        save(decor,"sources-not-configured-api34.png");
+        layout(decor,412,860);save(decor,"sources-not-configured-api34.png");
         ScrollView scroll=(ScrollView)page.getChildAt(0);save(scroll.getChildAt(0),"sources-not-configured-full-native.png");
     }
 
@@ -346,6 +348,7 @@ public class MainActivitySourceTest {
 
     private void chooseQqThroughPage()throws Exception{
         call("showMusicSources");MusicSourcesPage page=(MusicSourcesPage)main("sourcesPage");
+        findText(page,"官方 App 联动").performClick();
         @SuppressWarnings("unchecked") Map<String,Button> choose=(Map<String,Button>)field(page,"choose");
         assertTrue(choose.get("qq_music").isEnabled());choose.get("qq_music").performClick();
     }
@@ -358,7 +361,7 @@ public class MainActivitySourceTest {
     private static float number(Object target,String key)throws Exception{return ((Number)field(target,key)).floatValue();}
     private void call(String name)throws Exception{call(name,new Class<?>[0]);}
     private void call(String name,Class<?>[] types,Object...args)throws Exception{Method m=MainActivity.class.getDeclaredMethod(name,types);m.setAccessible(true);m.invoke(activity,args);}
-    private static View findText(View view,String text){if(view instanceof TextView&&text.contentEquals(((TextView)view).getText()))return view;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){View found=findText(group.getChildAt(i),text);if(found!=null)return found;}}return null;}
+    private static View findText(View view,String text){if(text.contentEquals(view.getContentDescription()==null?"":view.getContentDescription()))return view;if(view instanceof TextView&&text.contentEquals(((TextView)view).getText()))return view;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){View found=findText(group.getChildAt(i),text);if(found!=null)return found;}}return null;}
     private static void layout(View view,int w,int h){view.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));view.layout(0,0,w,h);}
     private static void touch(View view,long time,int action,float x,float y){MotionEvent event=MotionEvent.obtain(time,time+(action==2?16:action==1?32:0),action,x,y,0);try{view.dispatchTouchEvent(event);}finally{event.recycle();}}
     private static void save(View view,String name)throws Exception{

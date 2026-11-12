@@ -90,7 +90,7 @@ public class MainNeteaseIntegrationTest {
     private static ListView list(View view){if(view instanceof ListView)return (ListView)view;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){ListView found=list(((ViewGroup)view).getChildAt(i));if(found!=null)return found;}return null;}
     private void openFromSettings()throws Exception{
         call("showSettings",new Class<?>[0]);Dialog settings=(Dialog)main("settingsDialog");layout(settings);
-        View entry=described(settings.getWindow().getDecorView(),"音乐账户与联动");assertNotNull("Grouped settings opens account management",entry);entry.performClick();drain();Dialog sources=(Dialog)main("sourcesDialog");layout(sources);View netease=text(sources.getWindow().getDecorView(),"网易云音乐");assertNotNull(netease);netease.performClick();drain();assertNotNull(main("neteasePage"));assertTrue(((Dialog)main("neteaseDialog")).isShowing());
+        View entry=described(settings.getWindow().getDecorView(),"音乐账户与联动");assertNotNull("Grouped settings opens account management",entry);entry.performClick();drain();Dialog sources=(Dialog)main("sourcesDialog");layout(sources);View netease=described(sources.getWindow().getDecorView(),"网易云音乐 · 账号与曲库");assertNotNull(netease);netease.performClick();drain();assertNotNull(main("neteasePage"));assertTrue(((Dialog)main("neteaseDialog")).isShowing());
     }
     private void tapOnline(String label)throws Exception{
         NeteasePage page=(NeteasePage)main("neteasePage");ListView rows=(ListView)field(page,"list");int position=-1;
