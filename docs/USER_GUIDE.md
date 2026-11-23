@@ -1,17 +1,19 @@
 # 使用指南
 
+打开「音乐来源 → 公开音乐精选」即可免登录点播 74 首录音，或在统一搜索输入歌名、音乐人姓名。[公开音乐精选](public-music.md)
+
 使用 iPhone 或 Mac 请见 [Apple 平台安装与功能](APPLE.md)。以下说明适用于 Android。
 
 [返回项目主页](../README.md) · [常见问题](FAQ.md) · [反馈问题](https://github.com/liudbhx7-bot/record-room-android/issues/new/choose)
 
-适用于 **Record Room / 唱片机 0.8.2 预览版**。在线服务的可播放范围由对应平台与账号决定；当前验证范围见[验证记录](VERIFICATION.md)。
+适用于 **Record Room / 唱片机 0.8.4 预览版**。在线服务的可播放范围由对应平台与账号决定；当前验证范围见[验证记录](VERIFICATION.md)。
 
 ## 安装与更新
 
-1. 打开 [v0.8.2 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.2)。
-2. 下载 `Record-Room-0.8.2-Android.apk`。不要把 `Source code` 源码压缩包当作安装包。
+1. 打开 [v0.8.4 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.4)。
+2. 下载 `Record-Room-0.8.4-Android.apk`。不要把 `Source code` 源码压缩包当作安装包。
 3. 在 Android 上打开 APK，按系统提示允许当前下载来源安装应用，再完成安装。
-4. 系统应用信息中的版本应为 `0.8.2`，版本代码 `23`，包名 `com.recordroom.vinyl`。
+4. 系统应用信息中的版本应为 `0.8.4`，版本代码 `25`，包名 `com.recordroom.vinyl`。
 
 最低系统为 Android 8.0（API 26），面向 ARM / ARM64 设备。最低系统要求不代表所有机型都已实测。
 
@@ -38,7 +40,7 @@
 
 ## 播放页与唱针
 
-安装 0.8.2 后，进入播放页即可使用「浮光 01」。选一首带封面的歌曲，机身后方的封套与盘心会显示这张封面，左下盘缘随封面色调发光。
+进入播放页即可使用默认唱机「浮光 01」。选一首带封面的歌曲，机身后方的封套与盘心会显示这张封面，左下盘缘随封面色调发光。
 
 | 操作 | 行为 |
 | --- | --- |

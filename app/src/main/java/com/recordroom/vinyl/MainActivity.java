@@ -168,15 +168,26 @@ public final class MainActivity extends Activity {
         bindingRegistered = bindService(new Intent(this, PlayerService.class), connection, Context.BIND_AUTO_CREATE);
         io.execute(() -> {
             List<Track> demos = DemoCatalog.load(this);
-            List<Track> imports = LocalMusicImporter.loadLibrary(this);
+            List<Track> imports = new ArrayList<>();
+            String indexMessage = "";
+            try {
+                LocalLibraryIndex.Snapshot snapshot = LocalLibraryIndex.load(this);
+                imports.addAll(snapshot.tracks);
+                if (snapshot.recovered) indexMessage = "已使用上次完整的本地曲库索引";
+            } catch (java.io.IOException failed) {
+                indexMessage = "本地曲库索引无法读取，已保留原文件，暂停写入";
+            }
+            final String loadNotice = indexMessage;
             List<Track> online = OnlineCatalog.load(this);
             String onlineAccount = OnlineCatalog.accountId(this);
             List<Track> qqTracks=OnlineCatalog.load(this,"qq"),appleTracks=OnlineCatalog.load(this,"applemusic");
+            List<Track> selectedPublic=OnlineCatalog.load(this,PublicMusicProvider.ID);
             String qqAccount=OnlineCatalog.accountId(this,"qq"),appleAccount=OnlineCatalog.accountId(this,"applemusic");
             handler.post(() -> {
                 if (destroyed) return;
+                if (!loadNotice.isEmpty()) Toast.makeText(this, loadNotice, Toast.LENGTH_LONG).show();
                 library.clear(); library.addAll(demos); local.clear(); local.addAll(imports); library.addAll(imports);
-                library.addAll(online);library.addAll(qqTracks);library.addAll(appleTracks); neteaseAccountId=onlineAccount;providerAccounts.put("qq",qqAccount);providerAccounts.put("applemusic",appleAccount);
+                library.addAll(online);library.addAll(qqTracks);library.addAll(appleTracks);library.addAll(selectedPublic); neteaseAccountId=onlineAccount;providerAccounts.put("qq",qqAccount);providerAccounts.put("applemusic",appleAccount);
                 libraryReady = true; initializeQueue(); refresh(); restorePendingPages(); if (shelfDialog != null && shelfDialog.isShowing()) renderShelf();
             });
         });
@@ -703,16 +714,21 @@ public final class MainActivity extends Activity {
         toast("正在读取 " + uris.size() + " 个文件…");
         io.execute(() -> {
             LocalCueImport.Result batch = LocalCueImport.read(this, uris);
-            ArrayList<Track> all;
-            synchronized (LocalMusicImporter.class) {
-                all = batch.merge(LocalMusicImporter.loadLibrary(this));
-                LocalMusicImporter.saveLibrary(this, all);
+            final LocalLibraryIndex.Snapshot saved;
+            try {
+                saved = LocalLibraryIndex.merge(this, batch);
+            } catch (java.io.IOException failed) {
+                handler.post(() -> {
+                    if (!destroyed) Toast.makeText(this, "导入未保存。请检查存储空间和本地曲库索引，原曲库已保留", Toast.LENGTH_LONG).show();
+                });
+                return;
             }
+            List<Track> all = saved.tracks;
             handler.post(() -> {
                 if (destroyed) return;
                 ArrayList<Track> online=new ArrayList<>();for(Track t:library)if(OnlineMusic.isRemote(t))online.add(t);
                 local.clear(); local.addAll(all); library.clear(); library.addAll(DemoCatalog.load(this)); library.addAll(all);library.addAll(online); libraryReady = true; initializeQueue();
-                toast(batch.summary());
+                toast(saved.recovered ? "已使用上次完整索引。" + batch.summary() : batch.summary());
                 if (shelfDialog != null && shelfDialog.isShowing()) renderShelf(); else showShelf();
 
             });
@@ -733,8 +749,19 @@ public final class MainActivity extends Activity {
     private void showAggregateSearch(Bundle saved){
         if(aggregatePage!=null)aggregatePage.close();
         AggregateSearchPage page=AggregateSearchPage.restore(this,new AggregateSearch(this),new AggregateSearchPage.Actions(){
-            public void play(List<AggregateSearch.Result> results,int index){if(player==null||results.isEmpty())return;for(AggregateSearch.Result result:results)for(Track track:result.alternatives)rememberProvider(OnlineMusic.providerId(track),Collections.singletonList(track));beginInternalSelection();player.setAggregateQueue(results,index);returnToPlayer();}
+            public void play(List<AggregateSearch.Result> results,int index){
+                if(player==null||results.isEmpty())return;
+                LinkedHashMap<String,List<Track>> grouped=new LinkedHashMap<>();
+                for(AggregateSearch.Result result:results){
+                    for(Track track:result.alternatives){
+                        grouped.computeIfAbsent(OnlineMusic.providerId(track),key->new ArrayList<>()).add(track);
+                    }
+                }
+                for(java.util.Map.Entry<String,List<Track>> entry:grouped.entrySet())rememberProvider(entry.getKey(),entry.getValue());
+                beginInternalSelection();player.setAggregateQueue(results,index);returnToPlayer();
+            }
             public void manageAccounts(){showMusicSources();}
+            public void publicCatalog(){showProvider(PublicMusicProvider.ID,null);}
             public void artist(AggregateSearch.ArtistResult result){showCatalogArtist(result.providerId,result.artist);}
             public List<Track> libraryTracks(){return new ArrayList<>(library);}
             public List<Track> recentTracks(){return collections.recent();}
@@ -829,7 +856,7 @@ public final class MainActivity extends Activity {
     }
     private LibraryStore.Playlist findPlaylist(String id){for(LibraryStore.Playlist p:collections.playlists())if(p.id.equals(id))return p;return null;}
     private void showEmptyCollection(String name){LinearLayout body=column();body.addView(note("“"+name+"”还没有歌曲。可以长按歌曲加入歌单，或导入本地音乐。"));Dialog d=sheet(name,body,false);body.addView(actionButton("导入音乐",()->{d.dismiss();pickAudio();}));}
-    private static void sortAlbum(List<Track> tracks) { Collections.sort(tracks, (a, b) -> { int aa = a.trackNumber > 0 ? a.trackNumber : Integer.MAX_VALUE, bb = b.trackNumber > 0 ? b.trackNumber : Integer.MAX_VALUE; return Integer.compare(aa, bb); }); }
+    private static void sortAlbum(List<Track> tracks) { tracks.sort(Track.ALBUM_ORDER); }
     private void showAlbum(ArrayList<Track> songs) {
         showAlbum(songs, null);
     }
@@ -1014,7 +1041,7 @@ public final class MainActivity extends Activity {
     private void updateSourceCover(){
         if(sourcesPage==null||sourcesDialog==null||!sourcesDialog.isShowing())return;
         String id=player==null?"":OnlineMusic.providerId(player.getCurrent());
-        String name="netease".equals(id)||"qq".equals(id)||"applemusic".equals(id)?providerName(id):"";
+        String name=ArtistLibraryData.supportsRemote(id)?providerName(id):"";
         sourcesPage.setPlayback(currentArtwork,name);
     }
     private void readAppleSourceConfiguration(){
@@ -1121,10 +1148,10 @@ public final class MainActivity extends Activity {
     private void addPageDock(FrameLayout page){LinearLayout capsule=column();capsule.setBackground(PlayerControls.glassCapsule(this));capsule.addView(iconButton("albums","专辑架",()->{if(shelfDialog==null||!shelfDialog.isShowing())showShelf();}));PlayerControls.Icon current=iconButton("disc","回到唱机",this::returnToPlayer);current.setArtwork(currentArtwork);capsule.addView(current);PlayerControls.Icon toggle=iconButton("play","播放或暂停",this::togglePlayback);toggle.setSymbol(player!=null&&player.isPlaying()?"pause":"play");pagePlayButtons.add(new java.lang.ref.WeakReference<>(toggle));capsule.addView(toggle);capsule.addView(iconButton("queue","打开播放队列",this::showQueue));FrameLayout.LayoutParams dock=new FrameLayout.LayoutParams(dp(48),-2,Gravity.END|Gravity.BOTTOM);dock.setMargins(0,0,dp(12),dp(18));page.addView(capsule,dock);}
     private View trackRow(Track t,Runnable action,int color,boolean art){LinearLayout row=row();row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(3),dp(8),dp(44),dp(8));if(art){CoverView image=new CoverView(this);image.setTrack(t,themes,120);row.addView(image,new LinearLayout.LayoutParams(dp(46),dp(46)));}LinearLayout labels=column();labels.setPadding(dp(12),0,0,0);TextView name=text(t.title,14,color);name.setMaxLines(2);name.setEllipsize(TextUtils.TruncateAt.END);labels.addView(name);TextView artist=text(t.artist,11,color);artist.setAlpha(.65f);artist.setSingleLine(true);labels.addView(artist);row.addView(labels,new LinearLayout.LayoutParams(0,-2,1));row.setContentDescription(t.title+"，"+t.artist);row.setFocusable(true);row.setOnClickListener(v->action.run());row.setOnLongClickListener(v->{showSongMenu(t);return true;});return row;}
     private void showArtist(Track seed){showArtist(seed,seed==null?"":seed.artist);}
-    private String providerName(String id){return "qq".equals(id)?"QQ 音乐":"qishui".equals(id)?"汽水音乐":"applemusic".equals(id)?"Apple Music":"网易云音乐";}
+    private String providerName(String id){if(PublicMusicProvider.ID.equals(id))return PublicMusicProvider.NAME;return "qq".equals(id)?"QQ 音乐":"qishui".equals(id)?"汽水音乐":"applemusic".equals(id)?"Apple Music":"网易云音乐";}
     private void showProvider(String id,Bundle saved){
         if("qishui".equals(id)){showMusicSources();return;}
-        if(!"qq".equals(id)&&!"netease".equals(id)&&!"applemusic".equals(id))return;
+        if(!ArtistLibraryData.supportsRemote(id))return;
         ProviderLibraryPage old=providerPages.get(id);if(old!=null){old.close();}
         MusicProvider provider=OnlineMusic.provider(this,id);
         ProviderLibraryPage.Search search=provider::searchTracks;
@@ -1219,7 +1246,7 @@ public final class MainActivity extends Activity {
     }
     private void showCatalogArtist(String provider,MusicProvider.Artist identity){
         if(identity==null||identity.id.isEmpty()||identity.name.isEmpty())return;
-        if(!"qq".equals(provider)&&!"netease".equals(provider)&&!"applemusic".equals(provider))return;
+        if(!ArtistLibraryData.supportsRemote(provider))return;
         showArtistPage(null,identity.name,provider,identity);
     }
     private void showArtistPage(Track seed,String requestedName,String provider,MusicProvider.Artist identity){
@@ -1240,8 +1267,44 @@ public final class MainActivity extends Activity {
     }
     private void showShare(String title,String subtitle,List<Track> songs){if(shareStudio!=null)shareStudio.close();registerShare(new ShareStudio(this,title,subtitle,songs,themes.background(albumKey()),themes.disc(albumKey())));}
     private Dialog registerShare(ShareStudio studio){shareStudio=studio;Dialog d=studio.show();dialogs.add(d);pageSnapshots.put(d,()->{Bundle b=pageState("share");b.putBundle("share",studio.snapshot());return b;});studio.setOnClosed(()->{dialogs.remove(d);pageSnapshots.remove(d);pageRestorers.remove(d);if(shareStudio==studio&&!studio.hasPendingSave())shareStudio=null;});return d;}
-    private void showTrackMenu(){if(usingExternal()){showMusicSources();return;}Track t=player==null?null:player.getCurrent();if(t==null){showShelf();return;}LinearLayout body=column();Dialog d=sheet(t.title,body,false);body.addView(note(t.artist+" · "+t.album));LinearLayout actions=row();likeButton=iconButton(collections.liked(t)?"heartfilled":"heart",collections.liked(t)?"取消喜欢":"喜欢歌曲",()->{boolean liked=collections.toggleLike(t);likeButton.setSymbol(liked?"heartfilled":"heart");toast(liked?"已加入喜欢的歌曲":"已取消喜欢");});actions.addView(likeButton);actions.addView(iconButton("artist","音乐人",()->{d.dismiss();showArtist(t);}));actions.addView(iconButton("share","分享歌曲",()->{d.dismiss();showShare(t.title,t.artist,single(t));}));actions.addView(iconButton("add","加入歌单",()->{d.dismiss();addToPlaylist(single(t));}));body.addView(actions);body.addView(actionButton("查看专辑",()->{d.dismiss();showCurrentAlbum();}));body.addView(actionButton("播放队列",()->{d.dismiss();showQueue();}));body.addView(actionButton("睡眠定时",()->{d.dismiss();showSleepTimer();}));}
-    private void showSongMenu(Track track){String[] options={collections.liked(track)?"取消喜欢":"喜欢歌曲","下一首播放","加入播放队列","加入歌单","查看音乐人","分享歌曲"};AlertDialog d=new AlertDialog.Builder(this).setTitle(track.title).setItems(options,(a,index)->{if(index==0){collections.toggleLike(track);if(shelfDialog!=null&&shelfDialog.isShowing())renderShelf();}if(index==1&&player!=null)player.enqueue(latestLocalTracks(single(track)),true);if(index==2&&player!=null)player.enqueue(latestLocalTracks(single(track)),false);if(index==3)addToPlaylist(single(track));if(index==4)showArtist(track);if(index==5)showShare(track.title,track.artist,single(track));}).create();trackDialog(d);d.show();}
+    private void showTrackMenu(){if(usingExternal()){showMusicSources();return;}Track t=player==null?null:player.getCurrent();if(t==null){showShelf();return;}LinearLayout body=column();Dialog d=sheet(t.title,body,false);body.addView(note(t.artist+" · "+t.album));LinearLayout actions=row();likeButton=iconButton(collections.liked(t)?"heartfilled":"heart",collections.liked(t)?"取消喜欢":"喜欢歌曲",()->{boolean liked=collections.toggleLike(t);likeButton.setSymbol(liked?"heartfilled":"heart");toast(liked?"已加入喜欢的歌曲":"已取消喜欢");});actions.addView(likeButton);actions.addView(iconButton("artist","音乐人",()->{d.dismiss();showArtist(t);}));actions.addView(iconButton("share","分享歌曲",()->{d.dismiss();showShare(t.title,t.artist,single(t));}));actions.addView(iconButton("add","加入歌单",()->{d.dismiss();addToPlaylist(single(t));}));body.addView(actions);if(PublicMusicProvider.ID.equals(t.provider))body.addView(actionButton("作品署名与许可",()->{d.dismiss();showPublicCredit(t);}));body.addView(actionButton("查看专辑",()->{d.dismiss();showCurrentAlbum();}));body.addView(actionButton("播放队列",()->{d.dismiss();showQueue();}));body.addView(actionButton("睡眠定时",()->{d.dismiss();showSleepTimer();}));}
+    private void showPublicCredit(Track track){
+        LinearLayout body=column();
+        Dialog dialog=sheet("作品署名与许可",body,false);
+        body.addView(note(track.title));
+        io.execute(()->{
+            try{
+                PublicMusicProvider provider=(PublicMusicProvider)OnlineMusic.provider(this,PublicMusicProvider.ID);
+                PublicMusicProvider.Entry entry=provider.entry(track.id);
+                handler.post(()->{
+                    if(destroyed||!dialog.isShowing())return;
+                    body.addView(note(entry.credit));
+                    body.addView(actionButton("作品原页",()->openCreditLink(entry.sourceUrl)));
+                    body.addView(actionButton(entry.license,()->openCreditLink(entry.licenseUrl)));
+                });
+            }catch(ProviderException failure){
+                handler.post(()->{if(!destroyed&&dialog.isShowing())body.addView(note(failure.getMessage()));});
+            }
+        });
+    }
+    private void openCreditLink(String url){
+        try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
+        catch(android.content.ActivityNotFoundException unavailable){toast("没有可打开网页的应用");}
+    }
+    private void showSongMenu(Track track){
+        ArrayList<String> options=new ArrayList<>(java.util.Arrays.asList(collections.liked(track)?"取消喜欢":"喜欢歌曲","下一首播放","加入播放队列","加入歌单","查看音乐人","分享歌曲"));
+        if(PublicMusicProvider.ID.equals(track.provider))options.add("作品署名与许可");
+        AlertDialog d=new AlertDialog.Builder(this).setTitle(track.title).setItems(options.toArray(new String[0]),(a,index)->{
+            if(index==0){collections.toggleLike(track);if(shelfDialog!=null&&shelfDialog.isShowing())renderShelf();}
+            if(index==1&&player!=null)player.enqueue(latestLocalTracks(single(track)),true);
+            if(index==2&&player!=null)player.enqueue(latestLocalTracks(single(track)),false);
+            if(index==3)addToPlaylist(single(track));
+            if(index==4)showArtist(track);
+            if(index==5)showShare(track.title,track.artist,single(track));
+            if(index==6)showPublicCredit(track);
+        }).create();
+        trackDialog(d);d.show();
+    }
     private void showAlbumActions(ArrayList<Track> songs){if(songs.isEmpty())return;Track first=songs.get(0);AlertDialog d=new AlertDialog.Builder(this).setTitle(first.album).setItems(new String[]{"加入歌单","接下来播放","加入播放队列","分享专辑"},(a,index)->{if(index==0)addToPlaylist(songs);if(index==1&&player!=null)player.enqueue(latestLocalTracks(songs),true);if(index==2&&player!=null)player.enqueue(latestLocalTracks(songs),false);if(index==3)showShare(first.album,first.albumArtist,songs);}).create();trackDialog(d);d.show();}
     private ArrayList<Track> single(Track track){ArrayList<Track> result=new ArrayList<>();result.add(track);return result;}
     private void addToPlaylist(ArrayList<Track> songs){ArrayList<LibraryStore.Playlist> lists=collections.playlists();String[] names=new String[lists.size()+1];names[0]="＋ 新建歌单";for(int i=0;i<lists.size();i++)names[i+1]=lists.get(i).name;AlertDialog d=new AlertDialog.Builder(this).setTitle("加入歌单").setItems(names,(a,which)->{if(which==0)createPlaylist(songs);else{collections.add(lists.get(which-1).id,songs);toast("已加入 "+lists.get(which-1).name);if(shelfDialog!=null&&shelfDialog.isShowing())renderShelf();}}).create();trackDialog(d);d.show();}

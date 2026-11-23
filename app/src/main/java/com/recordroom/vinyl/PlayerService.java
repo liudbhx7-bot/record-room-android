@@ -533,8 +533,25 @@ public class PlayerService extends Service {
     static boolean completeDuration(long actual,long expected){return actual>0&&expected>0&&Math.abs(actual-expected)<=Math.max(500,Math.min(5000,expected/20));}
 
     private void handlePlaybackError(PlaybackException failure) {
+        int responseCode=0;
+        for(Throwable cause=failure;cause!=null;cause=cause.getCause()){
+            if(cause instanceof HttpDataSource.InvalidResponseCodeException){
+                responseCode=((HttpDataSource.InvalidResponseCodeException)cause).responseCode;
+                break;
+            }
+        }
+        if(activeResource!=null && PublicMusicProvider.ID.equals(OnlineMusic.providerId(getCurrent()))){
+            if(responseCode==429)fail("公开录音来源请求过多，请稍后重试");
+            else if(responseCode==401||responseCode==403)fail("公开录音来源暂时拒绝访问，请稍后重试");
+            else if(responseCode>0)fail("公开录音来源暂时无法提供此曲（HTTP "+responseCode+"），请稍后重试");
+            else if(failure.errorCode==PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
+                    ||failure.errorCode==PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT)
+                fail("无法连接公开录音来源，请检查网络并重试");
+            else fail("公开录音暂时无法播放，请重试或选择其他作品");
+            return;
+        }
         boolean expired=activeResource!=null&&activeResource.expiresAtMs>0&&activeResource.expiresAtMs<=System.currentTimeMillis();
-        for(Throwable cause=failure;cause!=null;cause=cause.getCause())if(cause instanceof HttpDataSource.InvalidResponseCodeException){int code=((HttpDataSource.InvalidResponseCodeException)cause).responseCode;expired|=code==401||code==403||code==410;}
+        expired|=responseCode==401||responseCode==403||responseCode==410;
         if(OnlineMusic.isRemote(getCurrent())&&expired&&!urlRefreshUsed){positionMs=getPositionMs();urlRefreshUsed=true;prepareCurrent(true);return;}
         if(!OnlineMusic.isRemote(getCurrent())){
             fail("本地音频读取或解码失败，请检查文件完整性和访问权限");return;

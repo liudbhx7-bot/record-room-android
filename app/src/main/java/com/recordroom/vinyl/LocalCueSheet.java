@@ -26,6 +26,7 @@ final class LocalCueSheet {
     }
     final ArrayList<Entry> tracks = new ArrayList<>();
     String title = "", performer = "", genre = "", year = "";
+    int discNumber;
 
     private static String text(String value) {
         return value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")
@@ -88,6 +89,7 @@ final class LocalCueSheet {
                     if (tag.length == 2 && entry == null) {
                         if (tag[0].equalsIgnoreCase("GENRE")) sheet.genre = text(tag[1]);
                         if (tag[0].equalsIgnoreCase("DATE")) sheet.year = text(tag[1]);
+                        if (tag[0].equalsIgnoreCase("DISCNUMBER")) sheet.discNumber = Track.tagPosition(text(tag[1]));
                     }
                     break;
                 default: break;

@@ -53,6 +53,18 @@ public class LocalCueSheetTest {
         revised.tracks.add(first);
         assertEquals(Collections.singletonList(first),revised.merge(sliced));
     }
+    @Test public void missingAndMalformedDiscTagsKeepLegacyOrderAndCueInheritsOrOverridesDisc() throws Exception {
+        Track master=source("disc-b").withDiscNumber(2);
+        Map<String,List<Track>> byName=Collections.singletonMap("disk a.flac",Collections.singletonList(master));
+        assertEquals(2,LocalCueImport.expand(LocalCueSheet.parse(PREFIX+SONGS),byName,"b.cue").get(0).discNumber);
+        assertEquals(3,LocalCueImport.expand(LocalCueSheet.parse("REM DISCNUMBER 3/3\n"+PREFIX+SONGS),byName,"b.cue").get(0).discNumber);
+        org.json.JSONObject legacy=source("legacy").toJson();legacy.remove("discNumber");
+        Track first=Track.fromJson(legacy);
+        assertEquals(0,first.discNumber);assertEquals(0,Track.tagPosition("/"));assertEquals(0,Track.tagPosition("9999999999999"));
+        Track tie=source("tie").withDiscNumber(1);
+        List<Track> mixed=Arrays.asList(master,tie,first);
+        mixed.sort(Track.ALBUM_ORDER);assertEquals(Arrays.asList(tie,first,master),mixed);
+    }
     @Test public void selectedSheetAndAudioImportAsPlayableSegmentsAndPersist() throws Exception {
         android.content.Context app=org.robolectric.RuntimeEnvironment.getApplication();
         java.io.File folder=new java.io.File(app.getCacheDir(),"cue-import");
@@ -71,8 +83,8 @@ public class LocalCueSheetTest {
         assertEquals(imported.summary(),0,imported.failures);
         assertEquals(2,imported.tracks.size());
         assertEquals(Uri.fromFile(audio).toString(),imported.tracks.get(1).uri);
-        LocalMusicImporter.saveLibrary(app,imported.merge(Collections.emptyList()));
-        List<Track> restored=LocalMusicImporter.loadLibrary(app);
+        LocalLibraryIndex.merge(app,imported);
+        List<Track> restored=LocalLibraryIndex.load(app).tracks;
         assertEquals(2,restored.size());assertEquals(4200,restored.get(1).clipStartMs);
         LibraryStore library=new LibraryStore(app);
         LibraryStore.Playlist playlist=library.create("CUE keep",restored);
@@ -83,7 +95,10 @@ public class LocalCueSheetTest {
         ArrayList<Track> merged=revised.merge(before);
         assertEquals(2,merged.size());assertSame(unrelated,merged.get(0));
         assertEquals("修订版",merged.get(1).title);assertEquals(restored.get(0).id,merged.get(1).id);
-        LocalMusicImporter.saveLibrary(app,merged);
+        LocalCueImport.Result extra=new LocalCueImport.Result();
+        extra.tracks.add(unrelated);
+        LocalLibraryIndex.merge(app,extra);
+        assertEquals(2,LocalLibraryIndex.merge(app,revised).tracks.size());
         LibraryStore.Playlist preserved=library.playlists().stream().filter(item->playlist.id.equals(item.id)).findFirst().get();
         assertEquals(2,preserved.tracks.size());assertEquals(restored.get(0).id,preserved.tracks.get(0).id);
         assertEquals(restored.get(1).clipStartMs,preserved.tracks.get(1).clipStartMs);

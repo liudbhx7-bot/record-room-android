@@ -9,3 +9,4 @@ dialog{width:min(480px,100%);max-height:88svh;border:1px solid #ffffff1c;color:v
 @media(prefers-reduced-motion:reduce){*,*:before{animation:none!important;transition:none!important}}
 
 .transport button:disabled,.timeline input:disabled{opacity:.45;cursor:default}#retry{color:var(--ink);padding:10px 0;text-decoration:underline;text-underline-offset:4px}
+.library-track{display:flex;align-items:center;gap:10px;border-bottom:1px solid #ffffff18}.library-track .row{min-width:0;flex:1;border:0}.library-track .row>span:not(.chev){overflow-wrap:anywhere}.remove-track{color:var(--muted);min-width:44px;min-height:44px;font-size:13px}

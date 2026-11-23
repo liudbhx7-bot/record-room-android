@@ -99,7 +99,7 @@ public final class ProviderLibraryPage {
         LinearLayout bar=new LinearLayout(activity);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(10),0,dp(12),0);
         Button back=button("‹",this::back);back.setTextSize(28);back.setContentDescription("返回"+name+"上层");bar.addView(back,new LinearLayout.LayoutParams(dp(48),dp(52)));
         TextView heading=text(name,20,DesignSystem.onAmbient);heading.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));bar.addView(button("刷新",this::reload),new LinearLayout.LayoutParams(dp(64),dp(48)));page.addView(bar);
-        search=new EditText(activity);search.setTextSize(15);search.setTextColor(DesignSystem.onAmbient);search.setHintTextColor(DesignSystem.onAmbientMuted);search.setSingleLine(true);search.setHint("搜索"+name+"全曲库歌曲");search.setContentDescription("搜索"+name+"歌曲");search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);search.setPadding(dp(16),0,dp(16),0);
+        search=new EditText(activity);search.setTextSize(15);search.setTextColor(DesignSystem.onAmbient);search.setHintTextColor(DesignSystem.onAmbientMuted);search.setSingleLine(true);search.setHint(PublicMusicProvider.ID.equals(provider.id())?"搜索精选歌曲或音乐人":"搜索"+name+"全曲库歌曲");search.setContentDescription("搜索"+name+"歌曲");search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);search.setPadding(dp(16),0,dp(16),0);
         search.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));search.setBackground(DesignSystem.settingsCard(activity,20));LinearLayout.LayoutParams input=new LinearLayout.LayoutParams(-1,dp(48));input.setMargins(dp(18),dp(8),dp(18),dp(10));page.addView(search,input);search.setVisibility(songSearch==null?View.GONE:View.VISIBLE);setSearchText(query);
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void afterTextChanged(Editable value){}public void onTextChanged(CharSequence value,int start,int before,int count){if(suppressSearch||closed)return;query=value.toString().trim();restoreOffset=0;nextOffset=0;results.clear();pendingScroll=null;pendingPlaylist="";pendingLiked=false;invalidateRequest();main.removeCallbacks(searchDelay);main.postDelayed(searchDelay,350);}});
         search.setOnEditorActionListener((v,action,event)->{if(action!=EditorInfo.IME_ACTION_SEARCH)return false;main.removeCallbacks(searchDelay);searchSongs(false);return true;});
@@ -157,7 +157,7 @@ public final class ProviderLibraryPage {
     private void searchSongs(boolean more){
         if(closed)return;if(songSearch==null){if(provider.supportsAccount())loadHome();else loading("当前来源暂未提供公开搜索");return;}if(query.isEmpty()&&provider.supportsAccount()){loadHome();return;}
         String requested=query;int offset=more?nextOffset:0,target=more?0:restoreOffset;
-        if(!more){results.clear();nextOffset=0;loading(query.isEmpty()?"正在读取"+name+"热门歌曲…":"正在搜索“"+query+"”…");}else pendingScroll=ViewScrollState.capture(list);
+        if(!more){results.clear();nextOffset=0;loading(query.isEmpty()?"正在读取"+name+"…":"正在搜索“"+query+"”…");}else pendingScroll=ViewScrollState.capture(list);
         run(()->{
             ArrayList<Track> collected=new ArrayList<>();MusicProvider.Page<Track> page;int cursor=offset,iterations=0;
             do{if(Thread.currentThread().isInterrupted())throw new InterruptedException();page=songSearch.search(requested,cursor,PAGE_SIZE);if(page==null)throw invalid("搜索结果为空");collected.addAll(clean(page.items));if(page.hasMore&&page.nextOffset<=cursor)throw invalid("搜索分页未前进，请重试");cursor=page.nextOffset;if(++iterations>1000)throw invalid("搜索分页过多，请缩小搜索范围");}while(page.hasMore&&cursor<target);
@@ -165,7 +165,7 @@ public final class ProviderLibraryPage {
         },page->{if(!requested.equals(query))return;HashSet<String> seen=new HashSet<>();for(Track t:results)seen.add(LibraryStore.identity(t));for(Track t:page.items)if(seen.add(LibraryStore.identity(t)))results.add(t);nextOffset=page.nextOffset;hasMore=page.hasMore;restoreOffset=0;renderSearch();},()->searchSongs(more));
     }
     private void renderSearch(){
-        rows.clear();rows.add(Row.note(query.isEmpty()&&!provider.supportsAccount()?"热门推荐":"歌曲搜索","已加载 "+results.size()+" 首"));
+        rows.clear();rows.add(Row.note(query.isEmpty()&&!provider.supportsAccount()?"精选曲目":"歌曲搜索","已加载 "+results.size()+" 首"));
         for(int i=0;i<results.size();i++){Track track=results.get(i);final int at=i;rows.add(Row.song(track,()->actions.play(new ArrayList<>(results),at)));}
         if(results.isEmpty())rows.add(Row.note("没有找到相关歌曲","试试歌曲名或音乐人。"));
         if(hasMore)rows.add(Row.action("加载更多","",()->searchSongs(true)));update(true);

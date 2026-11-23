@@ -2,6 +2,10 @@
 
 本仓库保留原项目的版权与许可说明。根目录 [COPYING](COPYING) 为 GNU GPL v3 全文；以下第三方组件仍按各自的许可或提供条款使用，项目的 GPL 声明不会重新许可 Apple SDK 或其他第三方资源。
 
+## 公开录音与封套
+
+Android 0.8.4 随包提供公开音乐目录及封套。Kevin MacLeod 和 Eric Skiff 的录音按 CC BY 4.0 署名，Kimiko Ishizaka 的《哥德堡变奏曲》录音及其原版封套采用 CC0。逐曲作者、许可链接、可回溯的作品页和音频地址见[曲目清单](app/src/main/assets/public-music/catalog.json)。编辑封套与逐项来源见[公开音乐精选说明](docs/public-music.md)。
+
 ## 本地音频读取
 
 Media3 ExoPlayer 管理播放时钟、队列与 Android 音频输出。新增的本地文件读取器使用 FFmpeg 8.1.3 的 libavformat、libavcodec 和 libavutil。它只打开用户选定的文件描述符，包含 APE、WavPack、AIFF 和无加密 ALAC 的相关解封装与解码部分。该构建关闭网络协议、GPL 和 nonfree 功能。FFmpeg 版权所有归 FFmpeg developers，采用 LGPL-2.1-or-later。[FFmpeg 上游](https://github.com/FFmpeg/FFmpeg) · [Media3 上游](https://github.com/androidx/media) · [随包许可](app/src/main/assets/licenses/FFmpeg-LGPL-2.1.txt)。

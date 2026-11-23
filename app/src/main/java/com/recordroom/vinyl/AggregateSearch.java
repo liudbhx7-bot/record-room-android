@@ -88,7 +88,7 @@ public final class AggregateSearch implements AutoCloseable {
     AggregateSearch(List<Source> sources){for(Source source:sources){lanes.add(new Lane(source));artistLanes.add(new ArtistLane(source));albumLanes.add(new AlbumLane(source));}}
     private static List<Source> sources(Context app){
         ArrayList<Source> result=new ArrayList<>();int index=0;
-        for(String id:new String[]{"qq","netease","applemusic"}){
+        for(String id:new String[]{PublicMusicProvider.ID,"qq","netease","applemusic"}){
             final int order=index++;MusicProvider provider=OnlineMusic.provider(app,id);
             result.add(new Source(provider,()->OnlineMusic.sessionGeneration(app,id),
                     ()->!"applemusic".equals(id)||OnlineMusic.hasSearchAuthorization(app,id),

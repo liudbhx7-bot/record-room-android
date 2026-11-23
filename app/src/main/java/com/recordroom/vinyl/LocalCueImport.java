@@ -126,7 +126,7 @@ final class LocalCueImport {
             tracks.add(source.localSegment(e.number,e.title.isEmpty() ? "音轨 " + e.number : e.title,
                     songArtist.isEmpty() ? source.artist : songArtist, sheet.title.isEmpty() ? source.album : sheet.title,
                     sheet.performer.isEmpty() ? source.albumArtist : sheet.performer,sheet.genre.isEmpty()?source.genre:sheet.genre,
-                    sheet.year.isEmpty()?source.year:sheet.year,e.start,end,cueUri));
+                    sheet.year.isEmpty()?source.year:sheet.year,e.start,end,cueUri).withDiscNumber(sheet.discNumber > 0 ? sheet.discNumber : source.discNumber));
         }
         return tracks;
     }

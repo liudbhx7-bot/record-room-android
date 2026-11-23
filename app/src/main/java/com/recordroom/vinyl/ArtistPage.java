@@ -260,7 +260,7 @@ public final class ArtistPage {
         private void renderSongs(){
             if(data.songs.isEmpty()){empty("还没有这位音乐人的歌曲",loading?"正在读取在线资料":"将该艺人的歌曲加入资料库后，就能在这里播放。");return;}
             list=new ListView(activity);list.setContentDescription("音乐人资料库");list.setDivider(null);list.setDividerHeight(0);list.setVerticalScrollBarEnabled(false);list.setSelector(android.R.color.transparent);list.setBackground(round(blend(stage,ink,.04f),dp(activity,18),withAlpha(ink,25)));list.setPadding(dp(activity,15),dp(activity,10),dp(activity,15),dp(activity,12));list.setClipToPadding(false);
-            TextView source=text(activity,data.providerSongs?providerName()+"热门歌曲优先 · "+data.songs.size()+" 首":"资料库歌曲 · "+data.songs.size()+" 首（非热度排名）",12,withAlpha(ink,175));source.setPadding(0,dp(activity,10),0,dp(activity,16));list.addHeaderView(source,null,false);list.setAdapter(new SongsAdapter());body.addView(list,new FrameLayout.LayoutParams(-1,-1));
+            TextView source=text(activity,PublicMusicProvider.ID.equals(providerId)?"精选收录 · "+data.songs.size()+" 首":data.providerSongs?providerName()+"热门歌曲优先 · "+data.songs.size()+" 首":"资料库歌曲 · "+data.songs.size()+" 首（非热度排名）",12,withAlpha(ink,175));source.setPadding(0,dp(activity,10),0,dp(activity,16));list.addHeaderView(source,null,false);list.setAdapter(new SongsAdapter());body.addView(list,new FrameLayout.LayoutParams(-1,-1));
             ListView target=list;int position=songPosition,top=songTop;target.post(()->{if(list==target)target.setSelectionFromTop(position,top+target.getPaddingTop());});
         }
         private void renderCollections(){
@@ -271,9 +271,9 @@ public final class ArtistPage {
         private void playSongs(boolean shuffle){if(!data.songs.isEmpty())actions.play(new ArrayList<>(data.songs),0,shuffle);}
         private void chapterMenu(){PopupMenu menu=new PopupMenu(activity,counter);for(int i=0;i<3;i++)menu.getMenu().add(0,i,i,String.format(Locale.ROOT,"%02d  %s",i+1,NAMES[i]));menu.setOnMenuItemClickListener(item->{select(item.getItemId());return true;});menu.show();}
         private void moreMenu(){PopupMenu menu=new PopupMenu(activity,more);menu.getMenu().add(0,2,1,"随机播放").setEnabled(!data.songs.isEmpty());menu.getMenu().add(0,3,2,"选择章节");menu.setOnMenuItemClickListener(item->{if(item.getItemId()==2)playSongs(true);else chapterMenu();return true;});menu.show();}
-        private String providerName(){return "qq".equals(providerId)?"QQ音乐":"applemusic".equals(providerId)?"Apple Music":"网易云音乐";}
+        private String providerName(){if(PublicMusicProvider.ID.equals(providerId))return PublicMusicProvider.NAME;return "qq".equals(providerId)?"QQ音乐":"applemusic".equals(providerId)?"Apple Music":"网易云音乐";}
         private void updateStatus(){
-            String message=albumLoading?"正在读取完整专辑…":loading?"正在读取艺人资料…":failed?error+" · 点按重试":catalogFailed?"已载入 "+data.albums.size()+" 张，后续读取失败 · 点按重试":failedAlbum!=null?albumError+" · 点按重试":catalogLoading?"正在读取专辑 · 已载入 "+data.albums.size()+" 张":remoteDisabled?"已退出"+providerName()+"，保留其他来源资料":catalogComplete?"全部专辑已载入 · "+data.albums.size()+" 张":remote!=null?"音乐资料来自"+providerName():"来自你的音乐资料库";
+            String message=albumLoading?"正在读取完整专辑…":loading?"正在读取艺人资料…":failed?error+" · 点按重试":catalogFailed?"已载入 "+data.albums.size()+" 张，后续读取失败 · 点按重试":failedAlbum!=null?albumError+" · 点按重试":catalogLoading?"正在读取专辑 · 已载入 "+data.albums.size()+" 张":remoteDisabled?"已退出"+providerName()+"，保留其他来源资料":catalogComplete?(PublicMusicProvider.ID.equals(providerId)?"精选收录专辑 · ":"全部专辑已载入 · ")+data.albums.size()+" 张":remote!=null?"音乐资料来自"+providerName():"来自你的音乐资料库";
             status.setText(message);status.setTextColor(withAlpha(ink,175));status.setClickable(failed||catalogFailed||failedAlbum!=null);status.setContentDescription(message);
         }
         private void updatePlayback(boolean playing,Bitmap artwork,boolean canToggle){

@@ -27,6 +27,7 @@ public class Media3PlaybackTest {
     private FixtureService service;
     private CountDownLatch releaseResolution;
     public static class FixtureService extends PlayerService {
+        int publicFailureCode;
         final ArrayList<PlaybackResource> opened=new ArrayList<>();
         @Override protected DataSource.Factory createDataSourceFactory(PlaybackResource resource){
             if(resource==null)return super.createDataSourceFactory(null);
@@ -34,7 +35,11 @@ public class Media3PlaybackTest {
             return ()->new DataSource(){
                 final ByteArrayDataSource delegate=new ByteArrayDataSource(wav);Uri uri;
                 public void addTransferListener(TransferListener listener){delegate.addTransferListener(listener);}
-                public long open(DataSpec spec)throws IOException{uri=spec.uri;if(uri.getPath().contains("expired")){int code=uri.getPath().contains("401")?401:uri.getPath().contains("410")?410:403;throw new HttpDataSource.InvalidResponseCodeException(code,"fixture expiry",null,Collections.emptyMap(),spec,new byte[0]);}return delegate.open(spec);}
+                public long open(DataSpec spec)throws IOException{uri=spec.uri;
+                    if(publicFailureCode!=0&&!"fixture.invalid".equals(uri.getHost())){
+                        throw new HttpDataSource.InvalidResponseCodeException(publicFailureCode,"public origin status",null,Collections.emptyMap(),spec,new byte[0]);
+                    }
+                    if(uri.getPath().contains("expired")){int code=uri.getPath().contains("401")?401:uri.getPath().contains("410")?410:403;throw new HttpDataSource.InvalidResponseCodeException(code,"fixture expiry",null,Collections.emptyMap(),spec,new byte[0]);}return delegate.open(spec);}
                 public int read(byte[] data,int offset,int length)throws IOException{return delegate.read(data,offset,length);}
                 public Uri getUri(){return uri;}
                 public void close()throws IOException{delegate.close();}
@@ -100,6 +105,37 @@ public class Media3PlaybackTest {
         service.seekTo(7000);await(()->service.getPositionMs()>=7000);service.pausePlayback();long paused=service.getPositionMs();
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));assertFalse(service.isPlaying());assertEquals(paused,service.getPositionMs());
         System.out.println("MEDIA3_REAL_ENGINE local_pcm_duration_ms="+service.getDurationMs()+" seek_pause_passed (JVM audio sink, not device sound)");
+    }
+    @Test public void importedTwoDiscAlbumResumesInDiscOrderAndAdvancesAcrossDiscs() throws Exception {
+        final android.content.Context c=RuntimeEnvironment.getApplication();
+        ArrayList<Uri> files=new ArrayList<>();
+        for(String pair:new String[]{"2-2","1-1","2-1","1-2"}){
+            java.io.File file=new java.io.File(c.getCacheDir(),pair+".wav");
+            java.nio.file.Files.write(file.toPath(),wav);
+            Uri uri=Uri.fromFile(file); files.add(uri);
+            org.robolectric.shadows.util.DataSource src=org.robolectric.shadows.util.DataSource.toDataSource(c,uri);
+            java.util.function.BiConsumer<Integer,String> tag=(key,value)->org.robolectric.shadows.ShadowMediaMetadataRetriever.addMetadata(src,key,value);
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO,"yes");
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE,pair);
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUM,"Double LP");
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST,"Test musician");
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_DISC_NUMBER,"0"+pair.charAt(0)+"/2");
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER,"0"+pair.charAt(2)+" / 02");
+            tag.accept(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION,"18000");
+        }
+        LocalCueImport.Result imported=LocalCueImport.read(c,files);
+        assertEquals(imported.summary(),0,imported.failures);
+        LocalLibraryIndex.merge(c,imported);
+        List<Track> restored=LocalLibraryIndex.load(c).tracks;
+        ArtistLibraryData artist=new ArtistLibraryData("Test musician","","",restored,null,null);
+        assertEquals(1,artist.albums.size());
+        List<Track> ordered=artist.albums.get(0).tracks;
+        ArrayList<String> titles=new ArrayList<>();for(Track t:ordered)titles.add(t.title);
+        assertEquals(Arrays.asList("1-1","1-2","2-1","2-2"),titles);
+        service.setPlayMode(PlayerService.MODE_ORDER);service.setQueue(ordered,1,true);
+        await(service::isPlaying);service.seekTo(17700);
+        await(()->service.getIndex()==2);
+        assertEquals("2-1",service.getCurrent().title);
     }
     @Test public void cueTransitionsKeepNativeRendererAndRelativeTimeline() throws Exception {
         Track master=local();
@@ -173,6 +209,22 @@ public class Media3PlaybackTest {
             service.setQueue(Collections.singletonList(remote(18000)),0,false);service.seekTo(7000);service.startPlayback();await(service::isPlaying);
             assertEquals(2,resolutions.get());assertEquals(2,service.opened.size());assertTrue(service.getPositionMs()>=7000);assertTrue(service.isFullDurationVerified());
         }
+    }
+    @Test public void publicRecordingErrorsAreRetryableWithoutRefreshingAnAccountUrl() throws Exception {
+        Track selected=OnlineMusic.provider(service,PublicMusicProvider.ID).searchTracks("",0,1).items.get(0);
+        for(int code:new int[]{429,403}){
+            service.publicFailureCode=code;
+            service.opened.clear();
+            service.setQueue(Collections.singletonList(selected),0,true);
+            await(()->!service.getError().isEmpty());
+            assertTrue(service.getError().contains(code==429?"请求过多":"暂时拒绝访问"));
+            assertEquals("A public URL should not be refreshed as an account credential",1,service.opened.size());
+        }
+        provider(track->resource("full"));
+        service.setAggregateQueue(Collections.singletonList(new AggregateSearch.Result("same recording",
+                Arrays.asList(selected,remote(18000)))),0);
+        await(service::isPlaying);
+        assertEquals("netease",service.getCurrent().provider);
     }
     @Test public void repeatExpiryDoesNotRetryIndefinitely()throws Exception{
         AtomicInteger resolutions=new AtomicInteger();provider(track->{resolutions.incrementAndGet();return resource("expired");});

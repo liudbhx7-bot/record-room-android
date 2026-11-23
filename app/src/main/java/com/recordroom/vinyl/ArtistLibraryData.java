@@ -1,7 +1,6 @@
 package com.recordroom.vinyl;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,7 +14,7 @@ final class ArtistLibraryData {
         Collection(String key,String name,String artist,String artwork,String year,String remoteId,String provider,List<Track> tracks){
             this.key=key;this.name=name;this.artist=artist;this.artwork=empty(artwork);this.year=empty(year);
             this.remoteId=empty(remoteId);this.provider=empty(provider);this.tracks=uniqueTracks(tracks);
-            Collections.sort(this.tracks,(a,b)->Integer.compare(a.trackNumber>0?a.trackNumber:Integer.MAX_VALUE,b.trackNumber>0?b.trackNumber:Integer.MAX_VALUE));
+            this.tracks.sort(Track.ALBUM_ORDER);
         }
         boolean needsAlbum(){return supportsRemote(provider)&&!remoteId.isEmpty();}
         AlbumStackView.Entry entry(){return new AlbumStackView.Entry(key,name,artist,artwork,tracks);}
@@ -81,7 +80,7 @@ final class ArtistLibraryData {
         return albumArtist?same(track.albumArtist,name):same(track.artist,name)||containsArtist(track.artist,name);
     }
     static boolean same(String a,String b){return a!=null&&b!=null&&a.trim().equalsIgnoreCase(b.trim());}
-    static boolean supportsRemote(String provider){return "netease".equals(provider)||"qq".equals(provider)||"applemusic".equals(provider);}
+    static boolean supportsRemote(String provider){return "netease".equals(provider)||"qq".equals(provider)||"applemusic".equals(provider)||PublicMusicProvider.ID.equals(provider);}
     private static String empty(String value){return value==null?"":value;}
     private static boolean containsArtist(String all,String name){if(all==null||name==null)return false;for(String part:all.split("\\s*/\\s*"))if(same(part,name))return true;return false;}
     private static ArrayList<Track> uniqueTracks(List<Track> values){LinkedHashMap<String,Track> tracks=new LinkedHashMap<>();if(values!=null)for(Track track:values)if(track!=null)tracks.putIfAbsent(LibraryStore.identity(track),track);return new ArrayList<>(tracks.values());}

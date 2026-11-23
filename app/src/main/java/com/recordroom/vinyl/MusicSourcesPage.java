@@ -63,7 +63,8 @@ public final class MusicSourcesPage extends FrameLayout {
         heading(catalogue,"我的资料库","");
         localState=label("",13,SECONDARY);
         entry(catalogue,"albums","手机音乐","手机音乐",localState,()->showSection("library"));
-        heading(catalogue,"账号与曲库","在唱片机内播放");
+        heading(catalogue,"在线曲库","在唱片机内播放");
+        entry(catalogue,"disc",PublicMusicProvider.NAME,"打开公开音乐精选",label("免登录",13,SECONDARY),()->actions.direct(PublicMusicProvider.ID));
         entry(catalogue,"cloud","网易云音乐","网易云音乐 · 账号与曲库",null,actions::netease);
         entry(catalogue,"leaf","QQ 音乐","QQ 音乐 · 账号与曲库",null,()->actions.direct("qq"));
         appleState=label("",13,SECONDARY);

@@ -16,7 +16,7 @@ final class OnlineCatalog {
     private static final java.util.concurrent.ConcurrentHashMap<String,Snapshot> memory=new java.util.concurrent.ConcurrentHashMap<>();
     private static final Object writes=new Object();
     private static final class Snapshot {final String account;final ArrayList<Track> tracks;Snapshot(String account,List<Track> tracks){this.account=account;this.tracks=new ArrayList<>(tracks);}}
-    private static File file(Context context,String provider){if(!java.util.Arrays.asList("netease","qq","qishui","applemusic").contains(provider))throw new IllegalArgumentException("Unknown provider");return new File(context.getFilesDir(),provider+"-catalog-v1.json");}
+    private static File file(Context context,String provider){if(!java.util.Arrays.asList("netease","qq","qishui","applemusic",PublicMusicProvider.ID).contains(provider))throw new IllegalArgumentException("Unknown provider");return new File(context.getFilesDir(),provider+"-catalog-v1.json");}
     private static String key(Context context,String provider){return file(context,provider).getAbsolutePath();}
     private static Snapshot snapshot(Context context,String provider){
         String key=key(context,provider);Snapshot found=memory.get(key);if(found!=null)return found;

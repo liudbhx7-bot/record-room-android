@@ -6,9 +6,9 @@
 
 ## 应该下载哪个文件？
 
-下载 [Record-Room-0.8.2-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Android.apk)。Release 中的 `Source code` 是源码，不能直接安装到手机。
+下载 [Record-Room-0.8.4-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.4/Record-Room-0.8.4-Android.apk)。Release 中的 `Source code` 是源码，不能直接安装到手机。
 
-当前发布的是 Android 预览版，最低 Android 8.0（API 26），面向 ARM / ARM64 设备。没有发布 Windows、macOS 或 iOS 安装包。
+此 APK 适用于 Android 8.0（API 26）及以上的 ARM / ARM64 设备。Mac 用户可下载 0.8.2 通用 DMG。iPhone 用户可用 Safari 添加主屏幕播放器，或用 Xcode 签名安装 0.8.2 原生工程。[Apple 安装指南](APPLE.md)
 
 ## 能覆盖安装旧版本吗？
 
@@ -18,7 +18,7 @@
 
 ## 怎样启用浮光 01？
 
-安装或覆盖更新到 0.8.2 后，播放页会直接显示浮光 01，无需购买或单独启用。设置页底部和 Android 的应用信息均可查看版本，本次版本代码为 `23`。
+打开播放页即可使用默认唱机「浮光 01」。设置页底部和 Android 系统的应用信息均可查看安装版本。Android 0.8.4 的版本代码为 `25`。
 
 ## 为什么有时进度条不能拖动？
 
@@ -71,6 +71,12 @@
 本地资料库只能展示实际导入的文件。在线专辑会请求对应平台的曲目目录，两者的数据来源不同。当前没有通过歌曲宝或其他网站自动补齐本地专辑音频、封面和元数据的功能。
 
 同专辑归组依赖专辑、专辑艺人及平台 ID 等资料。文件标签不同可能被归为不同专辑，请先检查音频标签。
+
+## 升级前导入的本地歌曲突然看不到了，怎样找回？
+
+Android 0.8.3 及之前的版本在曲目索引超过 8 MiB 时可能显示空库。请在原安装上覆盖更新到 0.8.4 或更高版本，保留应用数据，更新前先暂停追加导入。新版能直接读取仍在设备上的旧索引。
+
+唱片架保存的是歌曲资料和文件位置。若旧版已经用新导入的一小批歌曲覆盖索引，且设备没有可恢复的副本，可以从系统文件选择器重新导入原音频。
 
 ## 汽水音乐为什么不能登录账号或直接搜索？
 

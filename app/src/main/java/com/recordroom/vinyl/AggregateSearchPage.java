@@ -37,6 +37,7 @@ public final class AggregateSearchPage {
     public interface Actions {
         void play(List<AggregateSearch.Result> results,int index);
         void manageAccounts();
+        default void publicCatalog() {}
         default List<Track> libraryTracks() { return Collections.emptyList(); }
         default List<Track> recentTracks() { return Collections.emptyList(); }
         default void catalogAlbum(AggregateSearch.AlbumResult value) {}
@@ -303,6 +304,7 @@ public final class AggregateSearchPage {
             if(albums.isEmpty()&&localRows.isEmpty())home.addView(text("曲库中还没有"+browse,14));
             return;
         }
+        section(home,PublicMusicProvider.NAME,"浏览",actions::publicCatalog);
         List<Track> recent=actions.recentTracks();
         for(Track t:recent){if(localRows.size()==8)break;localRows.add(t);}
         LinkedHashMap<String,Track> jackets=new LinkedHashMap<>();

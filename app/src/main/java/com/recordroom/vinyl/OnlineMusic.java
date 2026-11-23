@@ -13,6 +13,7 @@ public final class OnlineMusic {
     private static Context owner;
     private static MusicProvider netease;
     private static QQProvider qq;
+    private static PublicMusicProvider publicMusic;
     private static QishuiProvider qishui;
     private static AppleMusicProvider apple;
     private static AppleMusicSessionStore appleSession;
@@ -51,7 +52,7 @@ public final class OnlineMusic {
     }
     public static String providerId(Track track){
         if(track==null)return "";
-        for(String id:new String[]{"netease","qq","qishui","applemusic"})if(id.equals(track.provider)||track.uri.startsWith(id+"://"))return id;
+        for(String id:new String[]{"netease","qq","qishui","applemusic",PublicMusicProvider.ID})if(id.equals(track.provider)||track.uri.startsWith(id+"://"))return id;
         if(!track.provider.isEmpty())return "unsupported";
         String scheme=android.net.Uri.parse(track.uri).getScheme();
         if(scheme!=null&&!java.util.Arrays.asList("content","file","asset","http","https","android.resource").contains(scheme))return "unsupported";
@@ -73,7 +74,8 @@ public final class OnlineMusic {
     public static synchronized MusicProvider provider(Context context,String id){
         if("netease".equals(id))return netease(context);
         Context app=context.getApplicationContext();
-        if(additionalOwner!=app){additionalOwner=app;qq=null;qishui=null;apple=null;appleSession=null;qqSession=null;qishuiSession=null;}
+        if(additionalOwner!=app){additionalOwner=app;qq=null;qishui=null;apple=null;appleSession=null;qqSession=null;qishuiSession=null;publicMusic=null;}
+        if(PublicMusicProvider.ID.equals(id)){if(publicMusic==null)publicMusic=new PublicMusicProvider(app);return publicMusic;}
         if("qq".equals(id)){if(qq==null){qqSession=new QQSessionStore(app);qq=new QQProvider(qqSession);}return qq;}
         if("qishui".equals(id)){if(qishui==null){qishuiSession=new QishuiSessionStore(app);qishui=new QishuiProvider(qishuiSession);}return qishui;}
         if("applemusic".equals(id)){if(apple==null){appleSession=new AppleMusicSessionStore(app);apple=new AppleMusicProvider(appleSession);}return apple;}
@@ -86,6 +88,7 @@ public final class OnlineMusic {
     static synchronized AppleMusicSessionStore appleSession(Context context){provider(context,"applemusic");return appleSession;}
     static synchronized long sessionGeneration(Context context,String providerId){
         if("unsupported".equals(providerId))return -1;
+        if(PublicMusicProvider.ID.equals(providerId))return 0;
         provider(context,providerId);return "netease".equals(providerId)?session.generation():"qq".equals(providerId)?qqSession.generation():"qishui".equals(providerId)?qishuiSession.generation():appleSession.generation();
     }
     static synchronized long sessionGeneration(Context context){netease(context);return session.generation();}

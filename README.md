@@ -6,13 +6,15 @@
 
 Android · iPhone · Mac　／　封面配色与原石墨唱针
 
-**0.8.2 预览版** · Android 8.0+ · iOS 17+ 原生工程 · macOS 14+
+**Android 0.8.4 预览版** · Apple 原生 0.8.2 · Android 8.0+ · iOS 17+ 原生工程 · macOS 14+
 
-[**Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Android.apk) · [**iPhone 主屏幕播放器**](https://liudbhx7-bot.github.io/record-room-android/) · [**Mac 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-macOS.dmg) · [Apple 原生版安装说明](docs/APPLE.md)
+[**Android 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.4/Record-Room-0.8.4-Android.apk) · [**iPhone 主屏幕播放器**](https://liudbhx7-bot.github.io/record-room-android/) · [**Mac 安装包**](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-macOS.dmg) · [Apple 原生版安装说明](docs/APPLE.md)
 
 </div>
 
 Record Room 把当前专辑放在唱机后槽，播放时唱针落到唱片上。Android、普通 iPhone 和 Mac 都能导入自己的音乐，按专辑浏览和播放。iPhone 另提供可从 Safari 添加到主屏幕的离线播放器。
+
+**Android 0.8.4** 修复了大曲库重启后显示 0 首的问题。如果你的曲库突然变空，请保留应用数据并覆盖安装。想先听听看，可以打开「音乐来源 → 公开音乐精选」，免登录点播 74 首古典、爵士、钢琴、配乐和芯片音乐。[旧曲库恢复说明](docs/FAQ.md#升级前导入的本地歌曲突然看不到了怎样找回) · [曲目与授权](docs/public-music.md)
 
 「浮光 01」是默认唱机，直接随应用升级提供，无需购买。当前专辑的封套插在机身后方，盘心呈现同一张封面，左下盘缘透出随封面变化的光。盘面、底灯、背景和页面随当前封面配色；立体封套可以滑动选片、打开并抽出唱片。点曲名旁的「⋯」即可展开操作抽屉；搜索首页从最近听过的专辑封套开始。
 
@@ -22,15 +24,15 @@ Record Room 把当前专辑放在唱机后槽，播放时唱针落到唱片上�
 
 | 内容 | 入口 |
 | --- | --- |
-| Android 安装包 | [Record-Room-0.8.2-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Android.apk) |
+| Android 安装包 | [Record-Room-0.8.4-Android.apk](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.4/Record-Room-0.8.4-Android.apk) |
 | iPhone 主屏幕版 | [用 Safari 打开，再添加到主屏幕](https://liudbhx7-bot.github.io/record-room-android/) |
 | macOS 原生版 | [下载通用 DMG](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-macOS.dmg) |
 | iPhone 原生开发安装 | [Xcode 工程和共享素材](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.2/Record-Room-0.8.2-Apple-Project.zip) · [真机签名步骤](docs/APPLE.md) |
-| 版本说明与校验文件 | [v0.8.2 Release](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.2) |
-| 公开源码 | [浏览源码](https://github.com/liudbhx7-bot/record-room-android) · [版本归档](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.2) |
+| Android 版本说明与校验文件 | [v0.8.4 发行说明](https://github.com/liudbhx7-bot/record-room-android/releases/tag/v0.8.4) · [SHA256SUMS.txt](https://github.com/liudbhx7-bot/record-room-android/releases/download/v0.8.4/SHA256SUMS.txt) |
+| 公开源码 | [浏览 v0.8.4 源码](https://github.com/liudbhx7-bot/record-room-android/tree/v0.8.4) · [历次发布](https://github.com/liudbhx7-bot/record-room-android/releases) |
 | 问题反馈 | [提交问题](https://github.com/liudbhx7-bot/record-room-android/issues/new/choose) |
 
-下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.8.2`，版本代码为 `23`。
+下载 `.apk` 文件即可安装，GitHub 自动生成的 `Source code` 压缩包是开发源码。最低系统为 Android 8.0（API 26），当前目标 API 36，包名为 `com.recordroom.vinyl`，版本号为 `0.8.4`，版本代码为 `25`。
 
 相同签名的旧版本可覆盖安装。自行编译的安装包使用自己的签名，通常不能直接覆盖本项目发布的 APK，详见[安装与更新](docs/USER_GUIDE.md#安装与更新)。当前没有应用内自动更新功能，请从 Release 下载更新。
 
@@ -94,6 +96,7 @@ Record Room 把当前专辑放在唱机后槽，播放时唱针落到唱片上�
 | 来源 | 当前接入方式 | 支持范围 |
 | --- | --- | --- |
 | 本地音乐 | 从系统文件选择器导入，在唱片机内播放 | 支持 MP3、AAC、FLAC、PCM WAV、Ogg Opus、ALAC、AIFF、APE 和 WavPack，详见[样本及输出验证](docs/VERIFICATION.md)。 |
+| 公开音乐精选 | 免登录搜索与点播 | 收录 3 位音乐人的 74 首录音。歌曲菜单可查看原始出处和许可。[浏览曲目](docs/public-music.md) |
 | 网易云音乐 | 账号、搜索、歌单、专辑、音乐人、在线歌词与官方 App 联动 | 公开目录和有时间戳的歌词已联网核验。私人账号使用需对应授权。 |
 | QQ 音乐 | 账号、搜索、歌单、专辑和音乐人目录；也可选官方 App 联动 | 已实现目录接入；公开搜索已核验。私人账号歌单及 VIP 全曲播放仍待真实账号验证。 |
 | Apple Music | 官方 MusicKit 授权与播放 SDK、目录与资料库；也可选官方 App 联动 | 入口与代码已接入。没有预置开发者令牌，需自行配置；真实授权与 DRM 全曲播放尚未验收。 |
@@ -104,14 +107,19 @@ Record Room 把当前专辑放在唱机后槽，播放时唱针落到唱片上�
 ## 三步开始使用
 
 1. 从本页 Release 下载并安装 APK。
-2. 打开 **设置 → 导入本地音乐**，先选一首设备上的音频；也可以在 **音乐账户与联动** 中选择在线账号或官方 App 联动。
+2. 在 **音乐来源 → 公开音乐精选** 选一首歌直接播放，或在 **设置 → 音乐与连接 → 导入本地音乐** 选择自己的音频。
 3. 点播放，或拖动唱针落到唱片上。点曲名旁的「⋯ → 搜索」查找音乐，点音乐人卡片进入主页，翻到第三章浏览专辑。
 
 工具自动隐藏后，点一下唱机背景即可重新显示。联动播放时，会员、曲库、队列与音频输出仍由官方 App 管理。
 
 [阅读完整使用指南 →](docs/USER_GUIDE.md)
 
-## 0.8.2 更新
+## 0.8.4 更新
+
+- 兼容旧版超过 8 MiB 的本地曲库索引。Android 15 模拟器覆盖升级后恢复 10,000 首，追加导入并重启后仍有 10,001 首。
+- 新增巴赫《哥德堡变奏曲》全套 32 轨、Kevin MacLeod 的 24 首配乐和 Eric Skiff 的 18 首芯片音乐。三组录音各抽测一首，均已在发行包中通过搜索、点播、拖动进度和暂停验证。[验证记录](docs/VERIFICATION.md)
+
+### 0.8.2 更新
 
 - 音乐来源采用 A「封面目录」，当前唱片封面和机身配色一起更新。
 - 普通 iPhone、Mac 原生播放器及 Safari 主屏幕播放器加入发布包。各平台入口与能力列在 [Apple 安装指南](docs/APPLE.md)。

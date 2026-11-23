@@ -7,17 +7,12 @@ import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.provider.OpenableColumns;
-import android.util.AtomicFile;
-import org.json.JSONArray;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.List;
 
 public final class LocalMusicImporter {
     private LocalMusicImporter() { }
@@ -27,14 +22,16 @@ public final class LocalMusicImporter {
             if (cursor != null && cursor.moveToFirst()) filename = or(cursor.getString(0),filename);
         } catch (Exception ignored) { }
         String title=filename.replaceFirst("\\.[^.]{1,6}$", ""),artist="未知歌手",album="本地单曲",albumArtist="",art="",genre="",year="";
-        long duration=0;int number=0;
+        long duration=0;int number=0,disc=0;
         String id=hex(MessageDigest.getInstance("SHA-256").digest(uri.toString().getBytes(StandardCharsets.UTF_8)));
         byte[] cover=null;
         try(LocalFormatDataSource.Reader reader=LocalFormatDataSource.inspect(c,uri,null)){
           if(reader!=null) {
             title=reader.value("title",title);artist=reader.value("artist",artist);album=reader.value("album",album);
             albumArtist=reader.value("album_artist","");genre=reader.value("genre","");year=reader.value("date","");
-            number=(int)number(reader.value("track","0").split("/")[0]);duration=reader.duration();cover=reader.cover();
+            number=Track.tagPosition(reader.value("track",reader.value("tracknumber","")));
+            disc=Track.tagPosition(reader.value("disc",reader.value("discnumber","")));
+            duration=reader.duration();cover=reader.cover();
           } else {
             MediaMetadataRetriever r = new MediaMetadataRetriever();
             try {
@@ -48,8 +45,8 @@ public final class LocalMusicImporter {
             genre=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE),"");
             year=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR),"");
             duration=number(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-            String track=or(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER),"0");
-            number=(int)number(track.split("/")[0]);
+            number=Track.tagPosition(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER));
+            disc=Track.tagPosition(r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DISC_NUMBER));
             cover=r.getEmbeddedPicture();
             } finally { try { r.release(); } catch (Exception ignored) { } }
           }
@@ -65,7 +62,7 @@ public final class LocalMusicImporter {
                 }
             }
         }
-        return new Track(id,title,artist,album,"本地音乐",uri.toString(),art,duration,number,albumArtist,genre,year);
+        return new Track(id,title,artist,album,"本地音乐",uri.toString(),art,duration,number,albumArtist,genre,year).withDiscNumber(disc);
     }
     private static boolean hasAudioTrack(Context c,Uri uri) {
         android.media.MediaExtractor extractor = new android.media.MediaExtractor();
@@ -83,26 +80,6 @@ public final class LocalMusicImporter {
     private static long number(String s){try{return Math.max(0,Long.parseLong(s));}catch(Exception e){return 0;}}
     private static String hex(byte[] b){StringBuilder s=new StringBuilder();for(byte n:b)s.append(String.format(java.util.Locale.ROOT,"%02x",n));return s.toString();}
     private static int sample(int w,int h,int size){int n=1;while(w/n>size*2||h/n>size*2)n*=2;return n;}
-    private static File libraryFile(Context c){return new File(c.getFilesDir(),"library.json");}
-    public static synchronized List<Track> loadLibrary(Context c){
-        File f=libraryFile(c);if(!f.exists()&&!new File(f.getPath()+".bak").exists())return new ArrayList<>();
-        ArrayList<Track> result=new ArrayList<>();
-        try(FileInputStream in=new AtomicFile(f).openRead()){
-            if(f.length()>8*1024*1024)throw new java.io.IOException("Library exceeds size limit");
-            java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();byte[] chunk=new byte[4096];int n;
-            while((n=in.read(chunk))!=-1)bytes.write(chunk,0,n);
-            JSONArray a=new JSONArray(new String(bytes.toByteArray(),StandardCharsets.UTF_8));
-            for(int i=0;i<a.length();i++)result.add(Track.fromJson(a.getJSONObject(i)));
-        }catch(Exception e){return new ArrayList<>();}
-        return result;
-    }
-    public static synchronized void saveLibrary(Context c,List<Track> tracks){
-        AtomicFile f=new AtomicFile(libraryFile(c));FileOutputStream out=null;
-        try{
-            JSONArray a=new JSONArray();for(Track t:tracks)a.put(t.toJson());
-            out=f.startWrite();out.write(a.toString().getBytes(StandardCharsets.UTF_8));f.finishWrite(out);
-        }catch(Exception e){if(out!=null)f.failWrite(out);}
-    }
     private static InputStream open(Context c,String value)throws Exception{
         if(value.startsWith("asset:///"))return c.getAssets().open(value.substring(9));
         if(value.startsWith("http://")||value.startsWith("https://"))return new FileInputStream(RemoteArtworkCache.fetch(c,value));
